@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health
+from app.api import health, me
 from app.config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=500, content={"detail": "Something went wrong. Please try again."})
 
     app.include_router(health.router, prefix="/api")
+    app.include_router(me.router, prefix="/api")
     return app
 
 
