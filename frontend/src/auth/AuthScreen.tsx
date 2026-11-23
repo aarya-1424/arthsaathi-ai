@@ -46,13 +46,15 @@ export function AuthScreen() {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) setError(friendly(err.message));
       } else if (mode === "signup") {
-        const { error: err } = await supabase.auth.signUp({
+        const { data, error: err } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { display_name: name.trim() }, emailRedirectTo: window.location.origin },
         });
         if (err) setError(friendly(err.message));
-        else setNotice("Almost done. Please check your email and confirm your account, then sign in.");
+        // With email confirmation OFF, we get a session and the app opens right away.
+        // With it ON (later), there is no session yet, so ask the user to check their email.
+        else if (!data?.session) setNotice("Almost done. Please check your email and confirm your account, then sign in.");
       } else {
         await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
         // Same message whether or not the email exists, so nobody can probe for accounts.

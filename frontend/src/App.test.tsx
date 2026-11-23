@@ -55,8 +55,8 @@ test("wrong password shows a friendly message", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Email or password is not correct.");
 });
 
-test("sign up asks the user to confirm their email", async () => {
-  auth.signUp.mockResolvedValue({ error: null });
+test("sign up with email confirmation ON asks the user to check their email", async () => {
+  auth.signUp.mockResolvedValue({ data: { session: null }, error: null });
   const user = userEvent.setup();
   render(<App />);
   await user.click(await screen.findByRole("button", { name: "Create a new account" }));
@@ -64,6 +64,18 @@ test("sign up asks the user to confirm their email", async () => {
   await user.type(screen.getByLabelText("Password"), "longenough1");
   await user.click(screen.getByRole("button", { name: "Sign up" }));
   expect(await screen.findByRole("status")).toHaveTextContent("check your email");
+});
+
+test("sign up with email confirmation OFF shows no 'check your email' message", async () => {
+  auth.signUp.mockResolvedValue({ data: { session: { access_token: "t", user: { email: "a@b.com" } } }, error: null });
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole("button", { name: "Create a new account" }));
+  await user.type(screen.getByLabelText("Email"), "a@b.com");
+  await user.type(screen.getByLabelText("Password"), "longenough1");
+  await user.click(screen.getByRole("button", { name: "Sign up" }));
+  await waitFor(() => expect(auth.signUp).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument();
 });
 
 test("password reset gives the same message for any email", async () => {
