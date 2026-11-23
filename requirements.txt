@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-pydantic
-requests
-PyPDF2
-faiss-cpu
-numpy
-tiktoken
-python-dotenv
