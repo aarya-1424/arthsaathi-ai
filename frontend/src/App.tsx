@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { AuthScreen, NewPasswordScreen } from "./auth/AuthScreen";
 import { api, ApiError } from "./lib/api";
 import { authConfigured, supabase } from "./lib/supabase";
+import { MoneyPage } from "./money/MoneyPage";
 import { ProfileWizard } from "./profile/ProfileWizard";
 import { OCCUPATIONS, rupees, type Profile } from "./profile/types";
 
@@ -11,7 +12,7 @@ function greeting(): string {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
-function Home(props: { profile: Profile; onEdit: () => void }) {
+function Home(props: { profile: Profile; onEdit: () => void; onMoney: () => void }) {
   const { session } = useAuth();
   const f = props.profile.financial!;
   const name = props.profile.display_name || session?.user.email?.split("@")[0] || "there";
@@ -29,6 +30,7 @@ function Home(props: { profile: Profile; onEdit: () => void }) {
         {f.monthly_emi !== null && f.monthly_emi > 0 && <p>Monthly EMIs: {rupees(f.monthly_emi)}</p>}
       </section>
       <p className="text-sm opacity-70">Your full dashboard is coming in a later step.</p>
+      <button className="rounded bg-emerald-800 px-4 py-2 text-white" onClick={props.onMoney}>My Money</button>
       <div className="flex gap-2">
         <button className="rounded border px-3 py-1 text-sm" onClick={props.onEdit}>Edit my profile</button>
         <button className="rounded border px-3 py-1 text-sm" onClick={() => supabase.auth.signOut()}>Sign out</button>
@@ -40,7 +42,7 @@ function Home(props: { profile: Profile; onEdit: () => void }) {
 function SignedIn() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(false);
+  const [view, setView] = useState<"home" | "edit" | "money">("home");
 
   const load = useCallback(() => {
     setError("");
@@ -64,17 +66,18 @@ function SignedIn() {
   if (!profile.onboarding_complete) {
     return <ProfileWizard initial={profile} mode="onboarding" onSaved={setProfile} />;
   }
-  if (editing) {
+  if (view === "money") return <MoneyPage onBack={() => setView("home")} />;
+  if (view === "edit") {
     return (
       <ProfileWizard
         initial={profile}
         mode="edit"
-        onSaved={(p) => { setProfile(p); setEditing(false); }}
-        onCancel={() => setEditing(false)}
+        onSaved={(p) => { setProfile(p); setView("home"); }}
+        onCancel={() => setView("home")}
       />
     );
   }
-  return <Home profile={profile} onEdit={() => setEditing(true)} />;
+  return <Home profile={profile} onEdit={() => setView("edit")} onMoney={() => setView("money")} />;
 }
 
 function Gate() {

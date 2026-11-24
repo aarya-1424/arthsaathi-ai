@@ -5,11 +5,23 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health, me, profile
+from app.api import health, me, money, profile
 from app.config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("arthsaathi")
+
+
+def _field_name(error: dict) -> str:
+    """Which field a validation error is about. Whole-entry checks name the field at the start
+    of their message, like "category: please choose...", so we read it from there."""
+    loc = error.get("loc") or ("body",)
+    name = str(loc[-1])
+    if name in ("body", "query"):
+        msg = str(error.get("msg", "")).removeprefix("Value error, ")
+        if ":" in msg:
+            name = msg.split(":", 1)[0].strip()
+    return name
 
 
 def create_app() -> FastAPI:
@@ -29,7 +41,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, exc: RequestValidationError) -> JSONResponse:
         # Tell the user WHICH fields need fixing, without echoing back what they typed.
-        fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc")})
+        fields = sorted({_field_name(e) for e in exc.errors()})
         return JSONResponse(
             status_code=422,
             content={"detail": "Some details are not valid. Please check and try again.", "fields": fields},
@@ -44,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(me.router, prefix="/api")
     app.include_router(profile.router, prefix="/api")
+    app.include_router(money.router, prefix="/api")
     return app
 
 
