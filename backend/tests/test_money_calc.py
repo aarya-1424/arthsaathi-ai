@@ -151,3 +151,29 @@ def test_comparison_with_last_month():
 def test_large_amounts_stay_exact():
     s = summarize("2026-11", [inc(100_000_000)] * 1000)
     assert s.total_income == 100_000_000_000
+
+
+# ---------- trend ----------
+
+from app.money.calc import month_list, monthly_totals  # noqa: E402
+
+
+def test_month_list_oldest_first_and_across_years():
+    assert month_list("2026-02", 3) == ["2025-12", "2026-01", "2026-02"]
+    assert month_list("2026-11", 1) == ["2026-11"]
+    assert len(month_list("2026-11", 12)) == 12 and month_list("2026-11", 12)[0] == "2025-12"
+
+
+def test_monthly_totals_fills_empty_months_with_zero():
+    rows = [("2026-11-05", "income", 28000), ("2026-11-09", "expense", 8000), ("2026-09-30", "expense", 500)]
+    result = monthly_totals(rows, ["2026-09", "2026-10", "2026-11"])
+    assert [(t.month, t.income, t.expenses, t.remaining) for t in result] == [
+        ("2026-09", 0, 500, -500),
+        ("2026-10", 0, 0, 0),
+        ("2026-11", 28000, 8000, 20000),
+    ]
+
+
+def test_monthly_totals_ignores_entries_outside_the_range():
+    result = monthly_totals([("2026-08-31", "income", 999), ("2026-12-01", "expense", 999)], ["2026-09", "2026-10", "2026-11"])
+    assert all(t.income == 0 and t.expenses == 0 for t in result)

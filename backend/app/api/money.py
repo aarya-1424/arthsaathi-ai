@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-from app.money.calc import Entry, Limit, month_bounds, previous_month, summarize
+from app.money.calc import Entry, Limit, month_bounds, month_list, monthly_totals, previous_month, summarize
 from app.money.repo import LIST_LIMIT, SUMMARY_LIMIT, MoneyRepo, get_money_repo
 from app.schemas.money import BudgetIn, BudgetLimit, BudgetOut, EntryIn, EntryList, EntryOut, MonthStr
 
@@ -82,3 +82,19 @@ def month_summary(repo: Repo, month: Month) -> dict:
         [Entry(r["kind"], r["amount"], r["category"]) for r in previous],
     )
     return asdict(result)
+
+
+# ---------- trend (for the bar chart) ----------
+
+@router.get("/money/trend")
+def money_trend(
+    repo: Repo,
+    end: Annotated[MonthStr, Query(description="Last month to include, YYYY-MM")],
+    months: Annotated[int, Query(ge=1, le=12)] = 6,
+) -> list[dict]:
+    """Income and spending for each of the last `months` months (oldest first). Empty months show zeros."""
+    wanted = month_list(end, months)
+    start, _ = month_bounds(wanted[0])
+    _, stop = month_bounds(wanted[-1])
+    rows = repo.list_entries(start, stop, columns="kind,amount,occurred_on", limit=SUMMARY_LIMIT)
+    return [asdict(t) for t in monthly_totals(((r["occurred_on"], r["kind"], r["amount"]) for r in rows), wanted)]

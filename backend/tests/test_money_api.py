@@ -242,3 +242,29 @@ def test_repo_sends_correct_month_filter_and_order(monkeypatch):
 
     monkeypatch.setattr(db_module.httpx, "request", lambda *a, **k: httpx.Response(200, json=[]))
     assert repo.delete("abc") is False  # nothing deleted -> False -> API answers 404
+
+
+# ---------- trend ----------
+
+def test_trend_returns_each_month_oldest_first_with_zeros(repo):
+    client.post("/api/transactions", json=entry(kind="income", amount=28000, category="salary", occurred_on="2026-11-01"))
+    client.post("/api/transactions", json=entry(amount=8000, category="rent", occurred_on="2026-11-02"))
+    client.post("/api/transactions", json=entry(amount=1200, occurred_on="2026-09-15"))
+    client.post("/api/transactions", json=entry(amount=700, occurred_on="2026-05-31"))  # too old for 6 months
+
+    r = client.get("/api/money/trend", params={"end": "2026-11", "months": 6})
+    assert r.status_code == 200
+    data = r.json()
+    assert [m["month"] for m in data] == ["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"]
+    assert data[-1] == {"month": "2026-11", "income": 28000, "expenses": 8000, "remaining": 20000}
+    assert data[3]["expenses"] == 1200
+    assert sum(m["expenses"] for m in data) == 9200  # May is not included
+
+
+def test_trend_defaults_to_six_months(repo):
+    assert len(client.get("/api/money/trend", params={"end": "2026-01"}).json()) == 6
+
+
+@pytest.mark.parametrize("params", [{"end": "2026-11", "months": 0}, {"end": "2026-11", "months": 13}, {"end": "2026-13"}, {}])
+def test_trend_rejects_bad_requests(repo, params):
+    assert client.get("/api/money/trend", params=params).status_code == 422

@@ -88,3 +88,11 @@ export function dayLabel(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
+
+export type MonthTotal = { month: string; income: number; expenses: number; remaining: number };
+
+/** "2026-11" -> "Nov" */
+export function shortMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-IN", { month: "short" });
+}

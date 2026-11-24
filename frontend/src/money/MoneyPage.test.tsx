@@ -77,7 +77,7 @@ beforeEach(() => {
 const today = todayISO();
 
 async function addEntry(user: ReturnType<typeof userEvent.setup>, opts: { received?: boolean; amount: string; category: string; description?: string }) {
-  await user.click(screen.getByRole("button", { name: "+ Add entry" }));
+  await user.click(screen.getByRole("button", { name: "Add entry" }));
   const form = screen.getByRole("form", { name: "Add entry" });
   if (opts.received) await user.click(within(form).getByLabelText("I received"));
   await user.type(within(form).getByLabelText("Amount"), opts.amount);
@@ -117,7 +117,7 @@ test("the form refuses empty amounts and missing categories without calling the 
   const user = userEvent.setup();
   render(<MoneyPage onBack={vi.fn()} />);
   await screen.findByText(/Nothing recorded/);
-  await user.click(screen.getByRole("button", { name: "+ Add entry" }));
+  await user.click(screen.getByRole("button", { name: "Add entry" }));
   const form = screen.getByRole("form", { name: "Add entry" });
   await user.click(within(form).getByRole("button", { name: "Add" }));
   expect(within(form).getByRole("alert")).toHaveTextContent("more than ₹0");
@@ -132,7 +132,7 @@ test("switching between spent and received changes the categories", async () => 
   const user = userEvent.setup();
   render(<MoneyPage onBack={vi.fn()} />);
   await screen.findByText(/Nothing recorded/);
-  await user.click(screen.getByRole("button", { name: "+ Add entry" }));
+  await user.click(screen.getByRole("button", { name: "Add entry" }));
   const form = screen.getByRole("form", { name: "Add entry" });
   expect(within(form).getByRole("option", { name: "Rent" })).toBeInTheDocument();
   await user.click(within(form).getByLabelText("I received"));
