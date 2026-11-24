@@ -23,3 +23,6 @@ Thumbs.db
 *.db
 *.log
 *.tsbuildinfo
+
+# Local tool settings
+.claude/

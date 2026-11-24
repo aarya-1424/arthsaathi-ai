@@ -1,14 +1,102 @@
 @import "tailwindcss";
 
-/* Temporary neutral colours. The real design system comes from your templates. */
-:root {
-  --bg: #fbfaf7;
-  --ink: #1d2a2a;
+/*
+ * ArthSaathi design tokens: dark theme, one mint-green accent.
+ * Amber is ONLY for "close to limit"; red is ONLY for "over limit" and errors.
+ * Keep these values in sync with src/ui/tokens.ts (a test checks this).
+ */
+@theme {
+  --color-ink-950: #0b1311; /* page background */
+  --color-ink-900: #101a17; /* sunken areas */
+  --color-ink-850: #13201c; /* cards */
+  --color-ink-800: #182822; /* raised cards, inputs */
+  --color-line: #23332d; /* borders */
+  --color-line-strong: #2c4a3e; /* emphasised borders */
+  --color-text: #e8f0ec; /* main text */
+  --color-muted: #8fa39a; /* supporting text */
+  --color-mint: #3ddc97; /* the one accent */
+  --color-mint-hover: #5fe5ab;
+  --color-on-mint: #06281a; /* text on mint */
+  --color-warn: #f5b547; /* close to limit */
+  --color-danger: #f26d6d; /* over limit, errors */
+
+  --font-sans: "Plus Jakarta Sans Variable", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1.25rem;
+
+  --shadow-glow: 0 0 0 1px rgb(61 220 151 / 0.25), 0 8px 28px -6px rgb(61 220 151 / 0.35);
+  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 
+/* Temporary: the old light look for screens not yet restyled. Removed in the restyle step. */
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--ink);
+  background: #fbfaf7;
+  color: #1d2a2a;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Everything inside .theme-dark uses the new design. */
+.theme-dark {
+  color-scheme: dark;
+  background: var(--color-ink-950);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-dark :focus-visible {
+  outline: 2px solid var(--color-mint);
+  outline-offset: 2px;
+}
+
+/* ---------- Glass (frosted, see-through) ---------- */
+.glass {
+  background: rgb(19 32 28 / 0.72);
+  border: 1px solid rgb(61 220 151 / 0.12);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+/* Fallback 1: browsers without blur support get a clean solid card. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--color-ink-850);
+  }
+}
+
+/* Fallback 2: users who asked their device for less transparency. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--color-ink-850);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Fallback 3: low-memory phones (class added in main.tsx) skip the heavy blur. */
+.lite .glass {
+  background: var(--color-ink-850);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ---------- Highlight card (soft green gradient) ---------- */
+.card-highlight {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(61 220 151 / 0.22) 0%, rgb(61 220 151 / 0) 55%),
+    linear-gradient(160deg, #173a2d 0%, var(--color-ink-850) 70%);
+  border: 1px solid var(--color-line-strong);
+}
+
+/* ---------- Calm motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .theme-dark *,
+  .theme-dark *::before,
+  .theme-dark *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
