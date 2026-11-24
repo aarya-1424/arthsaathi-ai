@@ -90,3 +90,28 @@ export const MAX_MONTHLY = 100_000_000;
 export function rupees(n: number): string {
   return "₹" + n.toLocaleString("en-IN");
 }
+
+/** Ready-made amounts for the money dropdowns. Exact numbers (not ranges) so later maths never has to guess. */
+const STUDENT_MONTHLY = [500, 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000];
+const EARNER_MONTHLY = [10000, 15000, 20000, 25000, 30000, 40000, 50000, 75000, 100000, 150000, 200000];
+
+export type MoneyField = "monthly_income" | "monthly_expenses" | "monthly_savings" | "monthly_emi" | "emergency_fund";
+
+export function amountChoices(field: MoneyField, occupation: string): number[] {
+  const student = occupation === "student";
+  switch (field) {
+    case "monthly_income":
+      // ₹0 is a real answer: homemakers, people between jobs, some students.
+      return [0, ...(student ? STUDENT_MONTHLY : EARNER_MONTHLY)];
+    case "monthly_expenses":
+      return student ? STUDENT_MONTHLY : EARNER_MONTHLY;
+    case "monthly_savings":
+      return student ? [0, 200, 500, 1000, 2000, 3000, 5000] : [0, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000, 50000];
+    case "monthly_emi":
+      return student ? [0, 500, 1000, 2000, 3000, 5000] : [0, 2000, 5000, 8000, 10000, 15000, 20000, 30000, 50000];
+    case "emergency_fund":
+      return student
+        ? [0, 1000, 5000, 10000, 25000, 50000]
+        : [0, 10000, 25000, 50000, 100000, 200000, 300000, 500000, 1000000];
+  }
+}

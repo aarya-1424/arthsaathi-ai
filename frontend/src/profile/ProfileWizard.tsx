@@ -1,8 +1,8 @@
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
 import {
-  AGE_RANGES, GOALS, INCOME_SOURCES, KNOWLEDGE_LEVELS, MAX_MONTHLY, OCCUPATIONS, STATES, rupees,
-  type Profile, type ProfileUpdate,
+  AGE_RANGES, amountChoices, GOALS, INCOME_SOURCES, KNOWLEDGE_LEVELS, MAX_MONTHLY, OCCUPATIONS, STATES, rupees,
+  type MoneyField, type Profile, type ProfileUpdate,
 } from "./types";
 
 type Form = {
@@ -140,13 +140,13 @@ export function ProfileWizard(props: {
               <p>We use these numbers only to give you advice that fits your life. Rough amounts are fine.</p>
               <p className="mt-1 font-medium">We will never ask for your bank password, UPI PIN, OTP or card PIN.</p>
             </div>
-            <Money label="Monthly income (or pocket money)" value={form.monthly_income} onChange={set("monthly_income")} />
+            <Money label="Monthly income (or pocket money)" choices={amountChoices("monthly_income" as MoneyField, form.occupation)} value={form.monthly_income} onChange={set("monthly_income")} />
             <Select label="Where does it come from?" optional options={INCOME_SOURCES} value={form.income_source} onChange={set("income_source")} />
-            <Money label="Monthly expenses (approximate)" value={form.monthly_expenses} onChange={set("monthly_expenses")} />
-            <Money label="How much do you save each month?" optional value={form.monthly_savings} onChange={set("monthly_savings")} />
-            <Money label="Loan EMIs each month" optional value={form.monthly_emi} onChange={set("monthly_emi")} />
+            <Money label="Monthly expenses (approximate)" choices={amountChoices("monthly_expenses" as MoneyField, form.occupation)} value={form.monthly_expenses} onChange={set("monthly_expenses")} />
+            <Money label="How much do you save each month?" optional choices={amountChoices("monthly_savings" as MoneyField, form.occupation)} value={form.monthly_savings} onChange={set("monthly_savings")} />
+            <Money label="Loan EMIs each month" optional choices={amountChoices("monthly_emi" as MoneyField, form.occupation)} value={form.monthly_emi} onChange={set("monthly_emi")} />
             <TextInput label="People who depend on you financially" optional digitsOnly maxLength={2} value={form.dependents} onChange={set("dependents")} />
-            <Money label="Savings kept aside for emergencies" optional value={form.emergency_fund} onChange={set("emergency_fund")} max={11} />
+            <Money label="Savings kept aside for emergencies" optional choices={amountChoices("emergency_fund" as MoneyField, form.occupation)} value={form.emergency_fund} onChange={set("emergency_fund")} max={11} />
             {overIncome && (
               <p className="text-sm text-amber-800">
                 Your expenses, savings and EMIs add up to more than your income. That's okay. You can adjust these any time.
@@ -227,21 +227,48 @@ function TextInput(props: { label: string; optional?: boolean; value: string; on
   );
 }
 
-function Money(props: { label: string; optional?: boolean; value: string; onChange: (v: string) => void; max?: number }) {
+const OTHER = "other";
+
+/** A dropdown of common amounts, plus "Other amount" which opens a box to type your own. */
+function Money(props: { label: string; optional?: boolean; choices: number[]; value: string; onChange: (v: string) => void; max?: number }) {
   const id = useId();
+  const inList = props.value !== "" && props.choices.includes(Number(props.value));
+  // Show the typing box if the user picked "Other", or if a saved amount isn't one of the choices.
+  const [typing, setTyping] = useState(props.value !== "" && !inList);
+
   return (
-    <Field id={id} label={props.label} optional={props.optional} hint={props.value ? rupees(Number(props.value)) : undefined}>
-      <div className="flex items-center rounded border">
-        <span aria-hidden="true" className="px-2 opacity-60">₹</span>
-        <input
-          id={id}
-          className="w-full p-2"
-          inputMode="numeric"
-          value={props.value}
-          // Keep only digits: no minus sign, no decimals, no letters.
-          onChange={(e) => props.onChange(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, props.max ?? 9))}
-        />
-      </div>
+    <Field id={id} label={props.label} optional={props.optional} hint={typing && props.value ? rupees(Number(props.value)) : undefined}>
+      <select
+        id={id}
+        className="rounded border p-2"
+        value={typing ? OTHER : props.value}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTyping(v === OTHER);
+          props.onChange(v === OTHER ? "" : v);
+        }}
+      >
+        <option value="">{props.optional ? "Prefer not to say" : "Choose an amount"}</option>
+        {props.choices.map((n) => (
+          <option key={n} value={String(n)}>{n === 0 ? "None (₹0)" : rupees(n)}</option>
+        ))}
+        <option value={OTHER}>Other amount: type it</option>
+      </select>
+      {typing && (
+        <div className="flex items-center rounded border">
+          <span aria-hidden="true" className="px-2 opacity-60">₹</span>
+          <input
+            aria-label={`${props.label}: exact amount`}
+            className="w-full p-2"
+            inputMode="numeric"
+            placeholder="Type the amount"
+            autoFocus
+            value={props.value}
+            // Keep only digits: no minus sign, no decimals, no letters.
+            onChange={(e) => props.onChange(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, props.max ?? 9))}
+          />
+        </div>
+      )}
     </Field>
   );
 }
