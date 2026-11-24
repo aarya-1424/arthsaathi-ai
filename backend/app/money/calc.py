@@ -150,3 +150,33 @@ def summarize(
         budget_remaining=budget_total - budget_spent,
         comparison=comparison,
     )
+
+
+# ---------- month-by-month trend ----------
+
+@dataclass
+class MonthTotal:
+    month: str
+    income: int
+    expenses: int
+    remaining: int
+
+
+def month_list(end: str, count: int) -> list[str]:
+    """The `count` months ending with `end`, oldest first. month_list("2026-02", 3) -> ["2025-12", "2026-01", "2026-02"]."""
+    months = [end]
+    for _ in range(count - 1):
+        months.append(previous_month(months[-1]))
+    return months[::-1]
+
+
+def monthly_totals(entries: Iterable[tuple[str, str, int]], months: list[str]) -> list[MonthTotal]:
+    """entries are (occurred_on 'YYYY-MM-DD', kind, amount). Months with no entries show zeros.
+    Entries outside the given months are ignored."""
+    totals = {m: [0, 0] for m in months}
+    for occurred_on, kind, amount in entries:
+        bucket = totals.get(occurred_on[:7])
+        if bucket is None:
+            continue
+        bucket[0 if kind == "income" else 1] += amount
+    return [MonthTotal(m, inc, exp, inc - exp) for m, (inc, exp) in totals.items()]

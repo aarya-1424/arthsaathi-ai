@@ -1,5 +1,11 @@
+import {
+  ArrowLeft, ArrowRight, Award, BookOpen, Briefcase, Car, Check, GraduationCap, HandCoins, House, Laptop, Lock,
+  PiggyBank, Receipt, ShieldCheck, Sparkles, Sprout, Store, TrendingUp, User, Users, Wallet, type LucideIcon,
+} from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
+import { Button, Card, cn, fieldClass, GlowBackground } from "../ui/components";
+import { Logo } from "../ui/Logo";
 import {
   AGE_RANGES, amountChoices, GOALS, INCOME_SOURCES, KNOWLEDGE_LEVELS, MAX_MONTHLY, OCCUPATIONS, STATES, rupees,
   type MoneyField, type Profile, type ProfileUpdate,
@@ -22,7 +28,22 @@ type Form = {
   knowledge_level: string;
 };
 
-const STEPS = ["About you", "Your money", "Your goals", "Your comfort with money"];
+const STEPS = [
+  { title: "About you", hint: "A little about who you are" },
+  { title: "Your money", hint: "Rough monthly amounts" },
+  { title: "Your goals", hint: "What you'd like help with" },
+  { title: "Your comfort with money", hint: "So we explain things your way" },
+];
+
+const OCCUPATION_ICONS: Record<string, LucideIcon> = {
+  student: GraduationCap, salaried: Briefcase, self_employed: Store, homemaker: House, other: User,
+};
+const KNOWLEDGE_ICONS: Record<string, LucideIcon> = { beginner: Sprout, basic: BookOpen, intermediate: TrendingUp, advanced: Award };
+const GOAL_ICONS: Record<string, LucideIcon> = {
+  save_money: PiggyBank, emergency_fund: ShieldCheck, manage_expenses: Wallet, pay_off_debt: HandCoins, buy_gadget: Laptop,
+  buy_vehicle: Car, education: GraduationCap, family_expense: Users, learn_investing: TrendingUp, understand_taxes: Receipt,
+  other: Sparkles,
+};
 
 function toForm(p: Profile | null): Form {
   const f = p?.financial;
@@ -91,6 +112,7 @@ export function ProfileWizard(props: {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const last = step === STEPS.length - 1;
+  const heading = props.mode === "onboarding" ? "Let's set up ArthSaathi for you" : "Edit your profile";
 
   const set = (key: keyof Form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
   const toggleGoal = (g: string) =>
@@ -118,95 +140,160 @@ export function ProfileWizard(props: {
   const overIncome = form.monthly_income !== "" && outgoing > Number(form.monthly_income);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-8">
-      <p className="text-sm opacity-70">
-        {props.mode === "onboarding" ? "Let's set up ArthSaathi for you" : "Edit your profile"} · Step {step + 1} of {STEPS.length}
-      </p>
-      <h1 className="text-2xl font-semibold">{STEPS[step]}</h1>
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        {step === 0 && (
-          <>
-            <TextInput label="What should we call you?" value={form.display_name} maxLength={80} onChange={set("display_name")} />
-            <Choice label="What do you do?" options={OCCUPATIONS} value={form.occupation} onChange={set("occupation")} />
-            <Select label="Your age range" optional options={AGE_RANGES} value={form.age_range} onChange={set("age_range")} />
-            <Select label="Your state" optional hint="Helps us find government schemes for you later." options={STATES.map((s) => ({ value: s, label: s }))} value={form.state} onChange={set("state")} />
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            <div className="rounded border border-emerald-800/30 bg-emerald-50 p-3 text-sm">
-              <p>We use these numbers only to give you advice that fits your life. Rough amounts are fine.</p>
-              <p className="mt-1 font-medium">We will never ask for your bank password, UPI PIN, OTP or card PIN.</p>
-            </div>
-            <Money label="Monthly income (or pocket money)" choices={amountChoices("monthly_income" as MoneyField, form.occupation)} value={form.monthly_income} onChange={set("monthly_income")} />
-            <Select label="Where does it come from?" optional options={INCOME_SOURCES} value={form.income_source} onChange={set("income_source")} />
-            <Money label="Monthly expenses (approximate)" choices={amountChoices("monthly_expenses" as MoneyField, form.occupation)} value={form.monthly_expenses} onChange={set("monthly_expenses")} />
-            <Money label="How much do you save each month?" optional choices={amountChoices("monthly_savings" as MoneyField, form.occupation)} value={form.monthly_savings} onChange={set("monthly_savings")} />
-            <Money label="Loan EMIs each month" optional choices={amountChoices("monthly_emi" as MoneyField, form.occupation)} value={form.monthly_emi} onChange={set("monthly_emi")} />
-            <TextInput label="People who depend on you financially" optional digitsOnly maxLength={2} value={form.dependents} onChange={set("dependents")} />
-            <Money label="Savings kept aside for emergencies" optional choices={amountChoices("emergency_fund" as MoneyField, form.occupation)} value={form.emergency_fund} onChange={set("emergency_fund")} max={11} />
-            {overIncome && (
-              <p className="text-sm text-amber-800">
-                Your expenses, savings and EMIs add up to more than your income. That's okay. You can adjust these any time.
-              </p>
-            )}
-          </>
-        )}
-
-        {step === 2 && (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm">What would you like help with? Pick any.</legend>
-            {GOALS.map((g) => (
-              <label key={g.value} className="flex items-center gap-2">
-                <input type="checkbox" checked={form.goals.includes(g.value)} onChange={() => toggleGoal(g.value)} />
-                {g.label}
-              </label>
+    <div className="theme-dark relative isolate min-h-dvh">
+      <GlowBackground />
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-10 lg:py-10">
+        {/* Journey panel: steps on the left (computer), progress bar on top (phone) */}
+        <aside className="flex flex-col gap-6 lg:sticky lg:top-10 lg:self-start">
+          <Logo size={34} />
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">{heading}</h2>
+            <p className="mt-1 text-sm text-muted">Step {step + 1} of {STEPS.length}</p>
+          </div>
+          <div className="flex gap-1.5 lg:hidden" aria-hidden="true">
+            {STEPS.map((s, i) => (
+              <span key={s.title} className={cn("h-1.5 flex-1 rounded-full transition-colors duration-300", i <= step ? "bg-accent" : "bg-line")} />
             ))}
-            {form.goals.includes("other") && (
-              <TextInput label="Tell us your goal" maxLength={100} value={form.other_goal} onChange={set("other_goal")} />
+          </div>
+          <ol className="hidden flex-col gap-1 lg:flex">
+            {STEPS.map((s, i) => {
+              const done = i < step;
+              const current = i === step;
+              return (
+                <li key={s.title} aria-current={current ? "step" : undefined}
+                  className={cn("flex items-center gap-3 rounded-2xl p-3 transition", current && "border border-accent/30 bg-ink-850 shadow-soft")}>
+                  <span className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                    done ? "bg-accent text-on-accent" : current ? "border-2 border-accent text-accent" : "border border-line text-muted",
+                  )}>
+                    {done ? <Check size={16} aria-hidden="true" /> : i + 1}
+                  </span>
+                  <span className="flex flex-col">
+                    <span className={cn("text-sm font-semibold", !current && !done && "text-muted")}>{s.title}</span>
+                    <span className="text-xs text-muted">{s.hint}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="hidden items-start gap-2 text-xs text-muted lg:flex">
+            <Lock size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
+            Only you can see these answers. You can change them any time.
+          </p>
+        </aside>
+
+        <Card key={step} className="pop-in p-5 sm:p-8">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{STEPS[step].title}</h1>
+          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-6" noValidate>
+            {step === 0 && (
+              <>
+                <TextInput label="What should we call you?" value={form.display_name} maxLength={80} onChange={set("display_name")} />
+                <CardChoice
+                  label="What do you do?"
+                  columns="sm:grid-cols-3"
+                  options={OCCUPATIONS.map((o) => ({ ...o, icon: OCCUPATION_ICONS[o.value] }))}
+                  value={form.occupation}
+                  onChange={set("occupation")}
+                />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Select label="Your age range" optional options={AGE_RANGES} value={form.age_range} onChange={set("age_range")} />
+                  <Select label="Your state" optional hint="Helps us find government schemes for you later." options={STATES.map((s) => ({ value: s, label: s }))} value={form.state} onChange={set("state")} />
+                </div>
+              </>
             )}
-          </fieldset>
-        )}
 
-        {step === 3 && (
-          <Choice
-            label="How comfortable are you with money topics?"
-            options={KNOWLEDGE_LEVELS.map((k) => ({ value: k.value, label: `${k.label}: ${k.hint}` }))}
-            value={form.knowledge_level}
-            onChange={set("knowledge_level")}
-          />
-        )}
+            {step === 1 && (
+              <>
+                <div className="flex gap-3 rounded-2xl border border-accent/25 bg-accent/[0.07] p-4 text-sm">
+                  <ShieldCheck size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
+                  <div>
+                    <p>We use these numbers only to give you advice that fits your life. Rough amounts are fine.</p>
+                    <p className="mt-1 font-semibold">We will never ask for your bank password, UPI PIN, OTP or card PIN.</p>
+                  </div>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Money label="Monthly income (or pocket money)" choices={amountChoices("monthly_income" as MoneyField, form.occupation)} value={form.monthly_income} onChange={set("monthly_income")} />
+                  <Select label="Where does it come from?" optional options={INCOME_SOURCES} value={form.income_source} onChange={set("income_source")} />
+                  <Money label="Monthly expenses (approximate)" choices={amountChoices("monthly_expenses" as MoneyField, form.occupation)} value={form.monthly_expenses} onChange={set("monthly_expenses")} />
+                  <Money label="How much do you save each month?" optional choices={amountChoices("monthly_savings" as MoneyField, form.occupation)} value={form.monthly_savings} onChange={set("monthly_savings")} />
+                  <Money label="Loan EMIs each month" optional choices={amountChoices("monthly_emi" as MoneyField, form.occupation)} value={form.monthly_emi} onChange={set("monthly_emi")} />
+                  <TextInput label="People who depend on you financially" optional digitsOnly maxLength={2} value={form.dependents} onChange={set("dependents")} />
+                  <Money label="Savings kept aside for emergencies" optional choices={amountChoices("emergency_fund" as MoneyField, form.occupation)} value={form.emergency_fund} onChange={set("emergency_fund")} max={11} />
+                </div>
+                {overIncome && (
+                  <p className="rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
+                    Your expenses, savings and EMIs add up to more than your income. That's okay. You can adjust these any time.
+                  </p>
+                )}
+              </>
+            )}
 
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+            {step === 2 && (
+              <fieldset className="flex flex-col gap-3">
+                <legend className="mb-3 text-sm text-muted">What would you like help with? Pick any.</legend>
+                <div className="flex flex-wrap gap-2">
+                  {GOALS.map((g) => {
+                    const Icon = GOAL_ICONS[g.value] ?? Sparkles;
+                    const on = form.goals.includes(g.value);
+                    return (
+                      <label key={g.value}
+                        className={cn(
+                          "flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition duration-200 active:scale-[0.97]",
+                          "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
+                          on ? "border-accent bg-accent/15 font-semibold text-text" : "border-line text-muted hover:border-accent/50 hover:text-text",
+                        )}>
+                        <input type="checkbox" className="sr-only" checked={on} onChange={() => toggleGoal(g.value)} />
+                        <Icon size={16} aria-hidden="true" className={on ? "text-accent" : undefined} />
+                        {g.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                {form.goals.includes("other") && (
+                  <TextInput label="Tell us your goal" maxLength={100} value={form.other_goal} onChange={set("other_goal")} />
+                )}
+              </fieldset>
+            )}
 
-        <div className="flex gap-2">
-          {step > 0 && (
-            <button type="button" className="rounded border px-4 py-2" onClick={() => { setError(""); setStep(step - 1); }}>
-              Back
-            </button>
-          )}
-          {step === 0 && props.onCancel && (
-            <button type="button" className="rounded border px-4 py-2" onClick={props.onCancel}>Cancel</button>
-          )}
-          <button type="submit" disabled={saving} className="flex-1 rounded bg-emerald-800 px-4 py-2 text-white disabled:opacity-60">
-            {saving ? "Saving..." : last ? (props.mode === "onboarding" ? "Finish" : "Save changes") : "Next"}
-          </button>
-        </div>
-      </form>
-    </main>
+            {step === 3 && (
+              <CardChoice
+                label="How comfortable are you with money topics?"
+                columns="sm:grid-cols-2"
+                options={KNOWLEDGE_LEVELS.map((k) => ({ value: k.value, label: k.label, hint: k.hint, icon: KNOWLEDGE_ICONS[k.value] }))}
+                value={form.knowledge_level}
+                onChange={set("knowledge_level")}
+              />
+            )}
+
+            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+
+            <div className="flex gap-3 border-t border-line pt-5">
+              {step > 0 && (
+                <Button variant="ghost" onClick={() => { setError(""); setStep(step - 1); }}>
+                  <ArrowLeft size={16} aria-hidden="true" />Back
+                </Button>
+              )}
+              {step === 0 && props.onCancel && <Button variant="ghost" onClick={props.onCancel}>Cancel</Button>}
+              <Button type="submit" variant="primary" disabled={saving} className="ml-auto min-w-36">
+                {saving ? "Saving..." : last ? (props.mode === "onboarding" ? "Finish" : "Save changes") : "Next"}
+                {!saving && !last && <ArrowRight size={16} aria-hidden="true" />}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    </div>
   );
 }
 
 function Field(props: { id: string; label: string; optional?: boolean; hint?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-1.5 text-sm">
       <label htmlFor={props.id}>
-        {props.label} {props.optional && <span className="opacity-60">(optional)</span>}
+        {props.label} {props.optional && <span className="text-muted">(optional)</span>}
       </label>
       {props.children}
-      {props.hint && <span className="text-xs opacity-60">{props.hint}</span>}
+      {props.hint && <span className="text-xs text-muted">{props.hint}</span>}
     </div>
   );
 }
@@ -217,7 +304,7 @@ function TextInput(props: { label: string; optional?: boolean; value: string; on
     <Field id={id} label={props.label} optional={props.optional}>
       <input
         id={id}
-        className="rounded border p-2"
+        className={fieldClass}
         inputMode={props.digitsOnly ? "numeric" : undefined}
         maxLength={props.maxLength}
         value={props.value}
@@ -240,7 +327,7 @@ function Money(props: { label: string; optional?: boolean; choices: number[]; va
     <Field id={id} label={props.label} optional={props.optional} hint={typing && props.value ? rupees(Number(props.value)) : undefined}>
       <select
         id={id}
-        className="rounded border p-2"
+        className={fieldClass}
         value={typing ? OTHER : props.value}
         onChange={(e) => {
           const v = e.target.value;
@@ -255,11 +342,11 @@ function Money(props: { label: string; optional?: boolean; choices: number[]; va
         <option value={OTHER}>Other amount: type it</option>
       </select>
       {typing && (
-        <div className="flex items-center rounded border">
-          <span aria-hidden="true" className="px-2 opacity-60">₹</span>
+        <span className="relative">
+          <span aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-muted">₹</span>
           <input
             aria-label={`${props.label}: exact amount`}
-            className="w-full p-2"
+            className={`${fieldClass} pl-7`}
             inputMode="numeric"
             placeholder="Type the amount"
             autoFocus
@@ -267,7 +354,7 @@ function Money(props: { label: string; optional?: boolean; choices: number[]; va
             // Keep only digits: no minus sign, no decimals, no letters.
             onChange={(e) => props.onChange(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, props.max ?? 9))}
           />
-        </div>
+        </span>
       )}
     </Field>
   );
@@ -277,7 +364,7 @@ function Select(props: { label: string; optional?: boolean; hint?: string; optio
   const id = useId();
   return (
     <Field id={id} label={props.label} optional={props.optional} hint={props.hint}>
-      <select id={id} className="rounded border p-2" value={props.value} onChange={(e) => props.onChange(e.target.value)}>
+      <select id={id} className={fieldClass} value={props.value} onChange={(e) => props.onChange(e.target.value)}>
         <option value="">{props.optional ? "Prefer not to say" : "Choose one"}</option>
         {props.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -285,16 +372,40 @@ function Select(props: { label: string; optional?: boolean; hint?: string; optio
   );
 }
 
-function Choice(props: { label: string; options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
+/** Pick one option from tappable cards (radio buttons underneath, so keyboards and screen readers work). */
+function CardChoice(props: {
+  label: string;
+  columns: string;
+  options: { value: string; label: string; hint?: string; icon?: LucideIcon }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const name = useId();
   return (
-    <fieldset className="flex flex-col gap-2 text-sm">
-      <legend className="mb-1">{props.label}</legend>
-      {props.options.map((o) => (
-        <label key={o.value} className="flex items-center gap-2">
-          <input type="radio" name={props.label} value={o.value} checked={props.value === o.value} onChange={() => props.onChange(o.value)} />
-          {o.label}
-        </label>
-      ))}
+    <fieldset className="flex flex-col gap-3 text-sm">
+      <legend className="mb-3">{props.label}</legend>
+      <div className={cn("grid grid-cols-2 gap-3", props.columns)}>
+        {props.options.map((o) => {
+          const Icon = o.icon ?? User;
+          const on = props.value === o.value;
+          return (
+            <label key={o.value}
+              className={cn(
+                "relative flex cursor-pointer flex-col gap-2 rounded-2xl border p-4 transition duration-200 active:scale-[0.98]",
+                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
+                on ? "border-accent bg-accent/10 shadow-glow" : "border-line bg-ink-800/50 hover:border-accent/50 hover:bg-ink-800",
+              )}>
+              <input type="radio" className="sr-only" name={name} value={o.value} checked={on} onChange={() => props.onChange(o.value)} />
+              <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", on ? "bg-accent text-on-accent" : "bg-ink-850 text-accent")}>
+                <Icon size={20} aria-hidden="true" />
+              </span>
+              <span className="font-semibold">{o.label}</span>
+              {o.hint && <span className="text-xs text-muted">{o.hint}</span>}
+              {on && <Check size={16} aria-hidden="true" className="absolute top-3 right-3 text-accent" />}
+            </label>
+          );
+        })}
+      </div>
     </fieldset>
   );
 }

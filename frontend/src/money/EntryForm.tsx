@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { api, ApiError } from "../lib/api";
 import { rupees } from "../profile/types";
+import { Button, Card, cn, fieldClass } from "../ui/components";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MAX_ENTRY, todayISO, type Entry, type EntryInput, type Kind } from "./types";
 
 /** Add a new entry, or change an existing one (when `editing` is given). */
@@ -47,48 +48,71 @@ export function EntryForm(props: { editing?: Entry; defaultDate: string; onSaved
     }
   }
 
+  const toggle = (value: Kind, text: string) => (
+    <label
+      className={cn(
+        "flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full text-sm transition",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
+        kind === value ? "bg-accent font-semibold text-on-accent" : "text-muted hover:text-text",
+      )}
+    >
+      <input type="radio" name="kind" className="sr-only" checked={kind === value} onChange={() => switchKind(value)} />
+      {text}
+    </label>
+  );
+
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded border p-4" noValidate aria-label={e ? "Change entry" : "Add entry"}>
-      <fieldset className="flex gap-4 text-sm">
-        <legend className="sr-only">Money in or out?</legend>
-        <label className="flex items-center gap-1">
-          <input type="radio" name="kind" checked={kind === "expense"} onChange={() => switchKind("expense")} /> I spent
-        </label>
-        <label className="flex items-center gap-1">
-          <input type="radio" name="kind" checked={kind === "income"} onChange={() => switchKind("income")} /> I received
-        </label>
-      </fieldset>
+    <Card variant="glass" className="p-5 sm:p-6">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate aria-label={e ? "Change entry" : "Add entry"}>
+        <h2 className="text-lg font-semibold">{e ? "Change entry" : "Add an entry"}</h2>
+        <fieldset className="flex gap-1 rounded-full border border-line bg-ink-900 p-1">
+          <legend className="sr-only">Money in or out?</legend>
+          {toggle("expense", "I spent")}
+          {toggle("income", "I received")}
+        </fieldset>
 
-      <label htmlFor={ids.amount} className="text-sm">Amount</label>
-      <div className="flex items-center rounded border">
-        <span aria-hidden="true" className="px-2 opacity-60">₹</span>
-        <input id={ids.amount} className="w-full p-2" inputMode="numeric" value={amount}
-          onChange={(ev) => setAmount(ev.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 9))} />
-      </div>
-      {amount && <span className="-mt-2 text-xs opacity-60">{rupees(Number(amount))}</span>}
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor={ids.amount}>Amount</label>
+          <span className="relative">
+            <span aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-muted">₹</span>
+            <input id={ids.amount} className={`${fieldClass} pl-7 text-lg font-semibold`} inputMode="numeric" value={amount} placeholder="0"
+              onChange={(ev) => setAmount(ev.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 9))} />
+          </span>
+          {amount && <span className="text-xs text-muted">{rupees(Number(amount))}</span>}
+        </div>
 
-      <label htmlFor={ids.category} className="text-sm">Category</label>
-      <select id={ids.category} className="rounded border p-2" value={category} onChange={(ev) => setCategory(ev.target.value)}>
-        <option value="">Choose one</option>
-        {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-      </select>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label htmlFor={ids.category}>Category</label>
+            <select id={ids.category} className={fieldClass} value={category} onChange={(ev) => setCategory(ev.target.value)}>
+              <option value="">Choose one</option>
+              {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label htmlFor={ids.date}>Date</label>
+            <input id={ids.date} type="date" className={fieldClass} value={date} max={today} min="2000-01-01" onChange={(ev) => setDate(ev.target.value)} />
+          </div>
+        </div>
 
-      <label htmlFor={ids.date} className="text-sm">Date</label>
-      <input id={ids.date} type="date" className="rounded border p-2" value={date} max={today} min="2000-01-01" onChange={(ev) => setDate(ev.target.value)} />
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor={ids.description}>What was it for? <span className="text-muted">(optional)</span></label>
+          <input id={ids.description} className={fieldClass} maxLength={120} value={description} placeholder="Lunch with friends" onChange={(ev) => setDescription(ev.target.value)} />
+        </div>
 
-      <label htmlFor={ids.description} className="text-sm">What was it for? <span className="opacity-60">(optional)</span></label>
-      <input id={ids.description} className="rounded border p-2" maxLength={120} value={description} onChange={(ev) => setDescription(ev.target.value)} />
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor={ids.notes}>Notes <span className="text-muted">(optional)</span></label>
+          <textarea id={ids.notes} className={`${fieldClass} py-2.5`} maxLength={500} rows={2} value={notes} onChange={(ev) => setNotes(ev.target.value)} />
+        </div>
 
-      <label htmlFor={ids.notes} className="text-sm">Notes <span className="opacity-60">(optional)</span></label>
-      <textarea id={ids.notes} className="rounded border p-2" maxLength={500} rows={2} value={notes} onChange={(ev) => setNotes(ev.target.value)} />
-
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <div className="flex gap-2">
-        <button type="button" className="rounded border px-4 py-2" onClick={props.onCancel}>Cancel</button>
-        <button type="submit" disabled={saving} className="flex-1 rounded bg-emerald-800 px-4 py-2 text-white disabled:opacity-60">
-          {saving ? "Saving..." : e ? "Save changes" : "Add"}
-        </button>
-      </div>
-    </form>
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={props.onCancel}>Cancel</Button>
+          <Button type="submit" variant="primary" disabled={saving} className="flex-1">
+            {saving ? "Saving..." : e ? "Save changes" : "Add"}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

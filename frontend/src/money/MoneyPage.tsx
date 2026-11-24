@@ -1,20 +1,37 @@
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { rupees } from "../profile/types";
+import { AreaChart, CHART_COLOURS, Donut, Legend, type Segment } from "../ui/charts";
+import { Button, Card, cn, Progress } from "../ui/components";
 import { BudgetEditor } from "./BudgetEditor";
 import { EntryForm } from "./EntryForm";
 import {
-  categoryLabel, currentMonth, dayLabel, monthLabel, shiftMonth, todayISO,
-  type BudgetLimit, type Entry, type Summary,
+  categoryLabel, currentMonth, dayLabel, monthLabel, shiftMonth, shortMonth, todayISO,
+  type BudgetLimit, type Entry, type MonthTotal, type Summary,
 } from "./types";
 
-type Data = { summary: Summary; entries: Entry[]; truncated: boolean; budget: BudgetLimit[] };
+type Data = { summary: Summary; entries: Entry[]; truncated: boolean; budget: BudgetLimit[]; trend: MonthTotal[] | null };
 type Panel = { type: "none" } | { type: "add" } | { type: "edit"; entry: Entry } | { type: "budget" };
 
 const STATUS_TEXT = { ok: "On track", near: "Close to limit", over: "Over limit" };
-const STATUS_COLOUR = { ok: "bg-emerald-700", near: "bg-amber-500", over: "bg-red-600" };
+const STATUS_COLOUR = { ok: "text-success", near: "text-warn", over: "text-danger" };
+/** The two lines on the 6-month chart: money received (orange) and money spent (light grey, dashed). */
+export function trendSeries(trend: MonthTotal[]) {
+  return [
+    { label: "Received", color: "#ff6a2b", values: trend.map((t) => t.income) },
+    { label: "Spent", color: "#d6d3ce", values: trend.map((t) => t.expenses) },
+  ];
+}
 
-export function MoneyPage(props: { onBack: () => void }) {
+/** Top 5 spending categories, and the rest grouped as "Everything else". */
+export function spendingSegments(categories: Summary["categories"]): Segment[] {
+  const top = categories.slice(0, 5).map((c, i) => ({ label: categoryLabel("expense", c.category), value: c.spent, color: CHART_COLOURS[i] }));
+  const rest = categories.slice(5).reduce((s, c) => s + c.spent, 0);
+  return rest > 0 ? [...top, { label: "Everything else", value: rest, color: CHART_COLOURS[5] }] : top;
+}
+
+export function MoneyPage(_props: { onBack?: () => void } = {}) {
   const thisMonth = currentMonth();
   const [month, setMonth] = useState(thisMonth);
   const [data, setData] = useState<Data | null>(null);
@@ -28,12 +45,14 @@ export function MoneyPage(props: { onBack: () => void }) {
     const ticket = ++latest.current;
     setError("");
     try {
-      const [summary, list, budget] = await Promise.all([
+      const [summary, list, budget, trend] = await Promise.all([
         api<Summary>(`/money/summary?month=${month}`),
         api<{ entries: Entry[]; truncated: boolean }>(`/transactions?month=${month}`),
         api<{ limits: BudgetLimit[] }>(`/budgets?month=${month}`),
+        // The chart is a bonus: if it fails, the rest of the page still works.
+        api<MonthTotal[]>(`/money/trend?end=${month}&months=6`).catch(() => null),
       ]);
-      if (ticket === latest.current) setData({ summary, entries: list.entries, truncated: list.truncated, budget: budget.limits });
+      if (ticket === latest.current) setData({ summary, entries: list.entries, truncated: list.truncated, budget: budget.limits, trend });
     } catch (e) {
       if (ticket === latest.current) setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     }
@@ -62,53 +81,62 @@ export function MoneyPage(props: { onBack: () => void }) {
   }
 
   const s = data?.summary;
+  const hasTrendData = data?.trend?.some((t) => t.income > 0 || t.expenses > 0) ?? false;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-8">
-      <button className="w-fit text-sm underline" onClick={props.onBack}>← Back</button>
-      <h1 className="text-2xl font-semibold">My Money</h1>
-
-      <nav aria-label="Choose month" className="flex items-center justify-between">
-        <button className="rounded border px-3 py-1" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>‹</button>
-        <span className="font-medium">{monthLabel(month)}</span>
-        <button className="rounded border px-3 py-1 disabled:opacity-40" aria-label="Next month" disabled={month >= thisMonth}
-          onClick={() => setMonth(shiftMonth(month, 1))}>›</button>
-      </nav>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight">My Money</h1>
+        <nav aria-label="Choose month" className="glass flex items-center gap-1 rounded-full p-1">
+          <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text active:scale-95"
+            aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
+            <ChevronLeft size={18} aria-hidden="true" />
+          </button>
+          <span className="min-w-36 text-center text-sm font-semibold">{monthLabel(month)}</span>
+          <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text active:scale-95 disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Next month" disabled={month >= thisMonth} onClick={() => setMonth(shiftMonth(month, 1))}>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        </nav>
+      </div>
 
       {error && (
-        <div role="alert" className="flex flex-col gap-2">
+        <Card role="alert" className="flex flex-col items-start gap-3">
           <p>{error}</p>
-          <button className="w-fit rounded border px-3 py-1" onClick={load}>Try again</button>
-        </div>
+          <Button onClick={load}>Try again</Button>
+        </Card>
       )}
-      {!data && !error && <p>Loading...</p>}
+      {!data && !error && <p className="text-muted">Loading...</p>}
 
       {data && s && (
         <>
-          <section aria-label="Month summary" className="grid grid-cols-3 gap-2 text-center text-sm">
-            <div className="rounded border p-2"><p className="opacity-70">Received</p><p className="font-semibold">{rupees(s.total_income)}</p></div>
-            <div className="rounded border p-2"><p className="opacity-70">Spent</p><p className="font-semibold">{rupees(s.total_expenses)}</p></div>
-            <div className="rounded border p-2">
-              <p className="opacity-70">{s.remaining < 0 ? "Overspent" : "Left"}</p>
-              <p className={`font-semibold ${s.remaining < 0 ? "text-red-700" : ""}`}>{rupees(Math.abs(s.remaining))}</p>
-            </div>
+          <section aria-label="Month summary" className="grid gap-4 sm:grid-cols-3">
+            <Card variant="highlight" className="sm:col-span-3 lg:col-span-1">
+              <p className="text-sm text-muted">{s.remaining < 0 ? "Overspent" : "Left"}</p>
+              <p className={cn("mt-1 text-3xl font-semibold tracking-tight", s.remaining < 0 && "text-danger")}>{rupees(Math.abs(s.remaining))}</p>
+              {s.savings_rate_percent !== null && s.remaining > 0 && (
+                <p className="mt-2 text-sm text-accent">You kept {s.savings_rate_percent}% of what you received this month.</p>
+              )}
+            </Card>
+            <Card className="lg:col-span-1">
+              <p className="text-sm text-muted">Received</p>
+              <p className="mt-1 text-2xl font-semibold">{rupees(s.total_income)}</p>
+            </Card>
+            <Card className="lg:col-span-1">
+              <p className="text-sm text-muted">Spent</p>
+              <p className="mt-1 text-2xl font-semibold">{rupees(s.total_expenses)}</p>
+              {s.comparison && s.comparison.expense_change !== 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  You spent {rupees(Math.abs(s.comparison.expense_change))} {s.comparison.expense_change > 0 ? "more" : "less"} than last month.
+                </p>
+              )}
+            </Card>
           </section>
 
-          {s.savings_rate_percent !== null && s.remaining > 0 && (
-            <p className="text-sm">You kept {s.savings_rate_percent}% of what you received this month.</p>
-          )}
-          {s.comparison && s.comparison.expense_change !== 0 && (
-            <p className="text-sm">
-              You spent {rupees(Math.abs(s.comparison.expense_change))} {s.comparison.expense_change > 0 ? "more" : "less"} than last month.
-            </p>
-          )}
-
           {panel.type === "none" && (
-            <div className="flex gap-2">
-              <button className="flex-1 rounded bg-emerald-800 px-4 py-2 text-white" onClick={() => setPanel({ type: "add" })}>+ Add entry</button>
-              <button className="rounded border px-4 py-2" onClick={() => setPanel({ type: "budget" })}>
-                {data.budget.length ? "Edit budget" : "Set budget"}
-              </button>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary" onClick={() => setPanel({ type: "add" })}><Plus size={18} aria-hidden="true" />Add entry</Button>
+              <Button onClick={() => setPanel({ type: "budget" })}>{data.budget.length ? "Edit budget" : "Set budget"}</Button>
             </div>
           )}
           {panel.type === "add" && (
@@ -121,83 +149,110 @@ export function MoneyPage(props: { onBack: () => void }) {
             <BudgetEditor month={month} current={data.budget} onSaved={saved} onCancel={() => setPanel({ type: "none" })} />
           )}
 
+          {(hasTrendData || s.categories.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-5">
+              {hasTrendData && data.trend && (
+                <Card className={cn("flex flex-col gap-4", s.categories.length > 0 ? "lg:col-span-3" : "lg:col-span-5")}>
+                  <h2 className="font-semibold">Last 6 months</h2>
+                  <AreaChart
+                    label="Money received and spent over the last 6 months"
+                    labels={data.trend.map((t) => shortMonth(t.month))}
+                    series={trendSeries(data.trend)}
+                  />
+                </Card>
+              )}
+              {s.categories.length > 0 && (
+                <Card aria-label="Where your money went" role="region" className={cn("flex flex-col gap-4", hasTrendData ? "lg:col-span-2" : "lg:col-span-5")}>
+                  <h2 className="font-semibold">Where your money went</h2>
+                  <div className="flex flex-col items-center gap-5 sm:flex-row lg:flex-col xl:flex-row">
+                    <Donut
+                      segments={spendingSegments(s.categories)}
+                      label={`Spending in ${monthLabel(month)}`}
+                      size={150}
+                      thickness={18}
+                      center={<><span className="text-xs text-muted">Spent</span><span className="font-semibold">{rupees(s.total_expenses)}</span></>}
+                    />
+                    <div className="w-full flex-1"><Legend segments={spendingSegments(s.categories)} /></div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+
           {s.budgets.length > 0 && (
-            <section aria-label="Budget progress" className="flex flex-col gap-3">
-              <h2 className="font-semibold">Budget</h2>
-              <p className="text-sm">
-                {s.budget_remaining >= 0
-                  ? `${rupees(s.budget_remaining)} left of your ${rupees(s.budget_total)} budget.`
-                  : `${rupees(-s.budget_remaining)} over your ${rupees(s.budget_total)} budget.`}
-              </p>
-              {s.budgets.map((b) => (
-                <div key={b.category} className="text-sm">
-                  <div className="flex justify-between">
-                    <span>{categoryLabel("expense", b.category)}</span>
-                    <span>{rupees(b.spent)} of {rupees(b.limit)}</span>
-                  </div>
-                  <div className="h-2 rounded bg-gray-200" role="progressbar" aria-label={`${categoryLabel("expense", b.category)} budget used`}
-                    aria-valuenow={Math.min(b.used_percent, 100)} aria-valuemin={0} aria-valuemax={100}>
-                    <div className={`h-2 rounded ${STATUS_COLOUR[b.status]}`} style={{ width: `${Math.min(b.used_percent, 100)}%` }} />
-                  </div>
-                  <span className="text-xs opacity-70">
-                    {STATUS_TEXT[b.status]} · {b.remaining >= 0 ? `${rupees(b.remaining)} left` : `${rupees(-b.remaining)} over`}
-                  </span>
+            <section aria-label="Budget progress">
+              <Card className="flex flex-col gap-5">
+                <div>
+                  <h2 className="font-semibold">Budget</h2>
+                  <p className="text-sm text-muted">
+                    {s.budget_remaining >= 0
+                      ? `${rupees(s.budget_remaining)} left of your ${rupees(s.budget_total)} budget.`
+                      : `${rupees(-s.budget_remaining)} over your ${rupees(s.budget_total)} budget.`}
+                  </p>
                 </div>
-              ))}
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {s.budgets.map((b) => (
+                    <div key={b.category} className="flex flex-col gap-2 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span>{categoryLabel("expense", b.category)}</span>
+                        <span className="text-muted">{rupees(b.spent)} of {rupees(b.limit)}</span>
+                      </div>
+                      <Progress value={b.spent} max={b.limit} status={b.status} label={`${categoryLabel("expense", b.category)} budget used`} />
+                      <span className={cn("text-xs", STATUS_COLOUR[b.status])}>
+                        {b.remaining === 0 ? "Limit reached" : STATUS_TEXT[b.status]} · {b.remaining >= 0 ? `${rupees(b.remaining)} left` : `${rupees(-b.remaining)} over`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             </section>
           )}
 
-          {s.categories.length > 0 && (
-            <section aria-label="Where your money went" className="flex flex-col gap-1 text-sm">
-              <h2 className="font-semibold">Where your money went</h2>
-              {s.categories.map((c) => (
-                <p key={c.category} className="flex justify-between">
-                  <span>{categoryLabel("expense", c.category)}</span>
-                  <span>{rupees(c.spent)} · {c.share_percent}%</span>
+          <section aria-label="Entries">
+            <Card className="flex flex-col gap-2">
+              <h2 className="font-semibold">Entries</h2>
+              {data.entries.length === 0 && (
+                <p className="text-sm text-muted">
+                  Nothing recorded for {monthLabel(month)} yet. Add what you received and what you spent to see where your money goes.
                 </p>
-              ))}
-            </section>
-          )}
-
-          <section aria-label="Entries" className="flex flex-col gap-2">
-            <h2 className="font-semibold">Entries</h2>
-            {data.entries.length === 0 && (
-              <p className="text-sm opacity-70">
-                Nothing recorded for {monthLabel(month)} yet. Add what you received and what you spent to see where your money goes.
-              </p>
-            )}
-            {data.truncated && <p className="text-sm">Showing the latest 1,000 entries for this month.</p>}
-            <ul className="flex flex-col divide-y">
-              {data.entries.map((e) => (
-                <li key={e.id} className="flex flex-col gap-1 py-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>
-                      {dayLabel(e.occurred_on)} · {categoryLabel(e.kind, e.category)}
-                      {e.description && <span className="opacity-70"> · {e.description}</span>}
-                    </span>
-                    <span className={e.kind === "income" ? "text-emerald-800" : ""}>
-                      {e.kind === "income" ? "+" : "−"}{rupees(e.amount)}
-                    </span>
-                  </div>
-                  {confirmDelete === e.id ? (
-                    <div className="flex items-center gap-2">
-                      <span>Delete this entry?</span>
-                      <button className="rounded border border-red-700 px-2 text-red-700" onClick={() => remove(e.id)}>Yes, delete</button>
-                      <button className="rounded border px-2" onClick={() => { setConfirmDelete(null); setDeleteError(""); }}>No</button>
-                      {deleteError && <span role="alert" className="text-red-700">{deleteError}</span>}
+              )}
+              {data.truncated && <p className="text-sm text-muted">Showing the latest 1,000 entries for this month.</p>}
+              <ul className="flex flex-col divide-y divide-line">
+                {data.entries.map((e) => (
+                  <li key={e.id} className="group flex flex-col gap-2 py-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium">{categoryLabel(e.kind, e.category)}{e.description && <span className="font-normal text-muted"> · {e.description}</span>}</span>
+                        <span className="text-xs text-muted">{dayLabel(e.occurred_on)}</span>
+                      </span>
+                      <span className={cn("shrink-0 font-semibold", e.kind === "income" ? "text-success" : "text-text")}>
+                        {e.kind === "income" ? "+" : "−"}{rupees(e.amount)}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="flex gap-3 text-xs">
-                      <button className="underline" onClick={() => setPanel({ type: "edit", entry: e })}>Edit</button>
-                      <button className="underline" onClick={() => setConfirmDelete(e.id)}>Delete</button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+                    {confirmDelete === e.id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>Delete this entry?</span>
+                        <Button variant="danger" className="min-h-9 px-3" onClick={() => remove(e.id)}>Yes, delete</Button>
+                        <Button variant="ghost" className="min-h-9 px-3" onClick={() => { setConfirmDelete(null); setDeleteError(""); }}>No</Button>
+                        {deleteError && <span role="alert" className="text-danger">{deleteError}</span>}
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 text-xs">
+                        <button type="button" className="flex min-h-9 items-center gap-1 rounded-full px-2 text-muted transition hover:bg-ink-800 hover:text-text" onClick={() => setPanel({ type: "edit", entry: e })}>
+                          <Pencil size={14} aria-hidden="true" />Edit
+                        </button>
+                        <button type="button" className="flex min-h-9 items-center gap-1 rounded-full px-2 text-muted transition hover:bg-danger/10 hover:text-danger" onClick={() => setConfirmDelete(e.id)}>
+                          <Trash2 size={14} aria-hidden="true" />Delete
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

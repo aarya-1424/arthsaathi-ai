@@ -24,3 +24,51 @@ test("legend shows real amounts and shares", () => {
   expect(screen.getByText("50%")).toBeInTheDocument();
   expect(screen.getByText("20%")).toBeInTheDocument();
 });
+
+import { BarChart, compactInr, niceMax } from "./charts";
+
+test.each([
+  [0, "₹0"], [950, "₹950"], [1000, "₹1k"], [25000, "₹25k"], [99999, "₹1L"], [99949, "₹99.9k"], [9_999_999, "₹1Cr"], [100000, "₹1L"],
+  [150000, "₹1.5L"], [1234567, "₹12.3L"], [10000000, "₹1Cr"], [23000000, "₹2.3Cr"], [-2500, "-₹2.5k"],
+])("compactInr(%i) is %s", (n, expected) => {
+  expect(compactInr(n)).toBe(expected);
+});
+
+test.each([[0, 1000], [1, 1], [7, 8], [180, 200], [220, 250], [28000, 30000], [30000, 30000], [12000, 15000], [41000, 50000], [100000, 100000]])(
+  "niceMax(%i) is %i", (max, expected) => {
+    expect(niceMax(max)).toBe(expected);
+  });
+
+test("bar chart describes every month in words", () => {
+  render(
+    <BarChart
+      label="Last 2 months"
+      series={[{ label: "Received", color: "#3ddc97" }, { label: "Spent", color: "#6f8f82" }]}
+      groups={[{ label: "Oct", values: [0, 1200] }, { label: "Nov", values: [28000, 8000] }]}
+    />,
+  );
+  expect(screen.getByRole("img", { name: "Last 2 months: Oct: Received ₹0, Spent ₹1,200; Nov: Received ₹28,000, Spent ₹8,000" })).toBeInTheDocument();
+  expect(screen.getByText("Received")).toBeInTheDocument();
+});
+
+test("bar chart with all zeros still draws safely", () => {
+  const { container } = render(
+    <BarChart label="Empty" series={[{ label: "Spent", color: "#fff" }]} groups={[{ label: "Nov", values: [0] }]} />,
+  );
+  for (const rect of container.querySelectorAll("rect")) expect(Number(rect.getAttribute("height"))).toBe(0);
+});
+
+import { smoothPath } from "./charts";
+
+test("smooth curve never goes above the top or below the zero line", () => {
+  // A sharp dip and spike would make a normal curve overshoot; ours is kept inside.
+  const d = smoothPath([{ x: 0, y: 100 }, { x: 10, y: 0 }, { x: 20, y: 100 }, { x: 30, y: 0 }], 0, 100);
+  const ys = [...d.matchAll(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)].map((m) => Number(m[2]));
+  expect(Math.min(...ys)).toBeGreaterThanOrEqual(0);
+  expect(Math.max(...ys)).toBeLessThanOrEqual(100);
+});
+
+test("smooth curve handles one point or none", () => {
+  expect(smoothPath([], 0, 100)).toBe("");
+  expect(smoothPath([{ x: 5, y: 5 }], 0, 100)).toBe("M 5 5");
+});
