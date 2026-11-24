@@ -1,10 +1,11 @@
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health, me
+from app.api import health, me, profile
 from app.config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -25,6 +26,15 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type"],
     )
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # Tell the user WHICH fields need fixing, without echoing back what they typed.
+        fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc")})
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Some details are not valid. Please check and try again.", "fields": fields},
+        )
+
     @app.exception_handler(Exception)
     async def unhandled_error(request: Request, exc: Exception) -> JSONResponse:
         # Log the error type and path only. Never log user data.
@@ -33,6 +43,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api")
     app.include_router(me.router, prefix="/api")
+    app.include_router(profile.router, prefix="/api")
     return app
 
 

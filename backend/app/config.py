@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     # Your Supabase project address, like https://xxxx.supabase.co
     supabase_url: str = ""
+    # Public key (safe to share). The server uses it together with the USER'S own login token,
+    # so the database privacy rules still apply to every request.
+    supabase_publishable_key: str = ""
+    # How long to wait for the database before giving up (seconds).
+    db_timeout_seconds: float = 10.0
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -28,6 +33,10 @@ class Settings(BaseSettings):
     @property
     def supabase_jwks_url(self) -> str:
         return f"{self.supabase_issuer}/.well-known/jwks.json"
+
+    @property
+    def supabase_rest_url(self) -> str:
+        return f"{self.supabase_url.rstrip('/')}/rest/v1"
 
 
 @lru_cache

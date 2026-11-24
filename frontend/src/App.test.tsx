@@ -28,11 +28,14 @@ test("signed-out visitors see the sign in form", async () => {
   expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
 });
 
-test("signed-in users see the home page and the server check", async () => {
+test("signed-in users with no profile yet start onboarding", async () => {
   auth.getSession.mockResolvedValue({ data: { session: { access_token: "t", user: { email: "a@b.com" } } } });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ display_name: null, financial: null, onboarding_complete: false }),
+  }));
   render(<App />);
-  expect(await screen.findByText(/signed in as a@b.com/)).toBeInTheDocument();
-  expect(await screen.findByText("Server connected.")).toBeInTheDocument();
+  expect(await screen.findByText(/Step 1 of 4/)).toBeInTheDocument();
 });
 
 test("short passwords are stopped before calling the server", async () => {
