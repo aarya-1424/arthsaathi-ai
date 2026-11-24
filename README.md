@@ -41,4 +41,4 @@ cd backend; .\.venv\Scripts\python -m pytest
 cd frontend; npm test
 ```
 
-See `docs/DECISIONS.md` for the main design choices.
+See `docs/DECISIONS.md` for the main design choices and `docs/PROJECT_STATUS.md` for everything built so far.
