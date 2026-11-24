@@ -81,7 +81,14 @@ export function installSampleApi() {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     const month = u.searchParams.get("month") ?? "";
 
-    if (u.pathname === "/api/profile") return reply(PROFILE);
+    if (u.pathname === "/api/profile") {
+      // #/design-onboarding previews the first-time questions for a brand-new user.
+      if (window.location.hash === "#/design-onboarding" && method === "GET") {
+        return reply({ display_name: "Rahul", financial: null, onboarding_complete: false });
+      }
+      if (method === "PUT") return reply({ display_name: body.display_name, financial: body, onboarding_complete: true });
+      return reply(PROFILE);
+    }
     if (u.pathname === "/api/money/summary") return reply(summary(month));
     if (u.pathname === "/api/money/trend") {
       const end = u.searchParams.get("end") ?? currentMonth();

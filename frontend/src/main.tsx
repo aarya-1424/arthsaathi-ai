@@ -14,11 +14,11 @@ if (memory !== undefined && memory <= 2) document.documentElement.classList.add(
 const DesignPreview = import.meta.env.DEV
   ? lazy(() => import("./preview/DesignPreview").then((m) => ({ default: m.DesignPreview })))
   : null;
-const showPreview = DesignPreview !== null && window.location.hash === "#/design";
+const showPreview = DesignPreview !== null && window.location.hash.startsWith("#/design");
 if (DesignPreview !== null) {
-  // Switching to or from #/design reloads, so the right screen always shows.
+  // Switching to or from #/design (or #/design-onboarding) reloads, so the right screen always shows.
   window.addEventListener("hashchange", () => {
-    if ((window.location.hash === "#/design") !== showPreview) window.location.reload();
+    if ((window.location.hash.startsWith("#/design")) !== showPreview) window.location.reload();
   });
 }
 
