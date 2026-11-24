@@ -113,7 +113,7 @@ export function AuthForm({ initialMode = "signin" }: { initialMode?: Mode }) {
           </div>
         )}
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        {notice && <p role="status" className="text-sm text-mint">{notice}</p>}
+        {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
         <Button type="submit" variant="primary" disabled={busy} className="w-full">
           {busy ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Sign up" : "Send reset link"}
         </Button>
@@ -131,9 +131,8 @@ export function AuthForm({ initialMode = "signin" }: { initialMode?: Mode }) {
 }
 
 /**
- * Sign in / sign up as a glass sheet over the landing page.
- * Phone: slides up from the bottom. Computer: floats on the right.
- * Escape or the close button closes it, and focus goes back where it was.
+ * Sign in / sign up as a centred pop-up card over the blurred landing page.
+ * Escape, the close button or clicking outside closes it, and focus goes back where it was.
  */
 export function AuthSheet({ initialMode, onClose }: { initialMode: Mode; onClose: () => void }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -157,17 +156,14 @@ export function AuthSheet({ initialMode, onClose }: { initialMode: Mode; onClose
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-md" onClick={onClose} aria-hidden="true" />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={
-          "glass sheet-in absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-[2rem] p-6 pb-8 " +
-          "lg:inset-x-auto lg:top-4 lg:right-4 lg:bottom-4 lg:w-[26rem] lg:rounded-[2rem] lg:p-8"
-        }
+        className="pop-in relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-line bg-ink-900 p-6 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.8),0_0_60px_-30px_rgb(255_106_43/0.6)] sm:p-8"
       >
         <div className="mb-6 flex items-center justify-between">
           <span id={titleId} className="sr-only">ArthSaathi account</span>

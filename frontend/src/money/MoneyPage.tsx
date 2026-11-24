@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { rupees } from "../profile/types";
-import { BarChart, CHART_COLOURS, Donut, Legend, type Segment } from "../ui/charts";
+import { AreaChart, CHART_COLOURS, Donut, Legend, type Segment } from "../ui/charts";
 import { Button, Card, cn, Progress } from "../ui/components";
 import { BudgetEditor } from "./BudgetEditor";
 import { EntryForm } from "./EntryForm";
@@ -15,11 +15,14 @@ type Data = { summary: Summary; entries: Entry[]; truncated: boolean; budget: Bu
 type Panel = { type: "none" } | { type: "add" } | { type: "edit"; entry: Entry } | { type: "budget" };
 
 const STATUS_TEXT = { ok: "On track", near: "Close to limit", over: "Over limit" };
-const STATUS_COLOUR = { ok: "text-mint", near: "text-warn", over: "text-danger" };
-export const TREND_SERIES = [
-  { label: "Received", color: "#3ddc97" },
-  { label: "Spent", color: "#6f8f82" },
-];
+const STATUS_COLOUR = { ok: "text-success", near: "text-warn", over: "text-danger" };
+/** The two lines on the 6-month chart: money received (orange) and money spent (light grey, dashed). */
+export function trendSeries(trend: MonthTotal[]) {
+  return [
+    { label: "Received", color: "#ff6a2b", values: trend.map((t) => t.income) },
+    { label: "Spent", color: "#d6d3ce", values: trend.map((t) => t.expenses) },
+  ];
+}
 
 /** Top 5 spending categories, and the rest grouped as "Everything else". */
 export function spendingSegments(categories: Summary["categories"]): Segment[] {
@@ -112,7 +115,7 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
               <p className="text-sm text-muted">{s.remaining < 0 ? "Overspent" : "Left"}</p>
               <p className={cn("mt-1 text-3xl font-semibold tracking-tight", s.remaining < 0 && "text-danger")}>{rupees(Math.abs(s.remaining))}</p>
               {s.savings_rate_percent !== null && s.remaining > 0 && (
-                <p className="mt-2 text-sm text-mint">You kept {s.savings_rate_percent}% of what you received this month.</p>
+                <p className="mt-2 text-sm text-accent">You kept {s.savings_rate_percent}% of what you received this month.</p>
               )}
             </Card>
             <Card className="lg:col-span-1">
@@ -151,10 +154,10 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
               {hasTrendData && data.trend && (
                 <Card className={cn("flex flex-col gap-4", s.categories.length > 0 ? "lg:col-span-3" : "lg:col-span-5")}>
                   <h2 className="font-semibold">Last 6 months</h2>
-                  <BarChart
+                  <AreaChart
                     label="Money received and spent over the last 6 months"
-                    series={TREND_SERIES}
-                    groups={data.trend.map((t) => ({ label: shortMonth(t.month), values: [t.income, t.expenses] }))}
+                    labels={data.trend.map((t) => shortMonth(t.month))}
+                    series={trendSeries(data.trend)}
                   />
                 </Card>
               )}
@@ -196,7 +199,7 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
                       </div>
                       <Progress value={b.spent} max={b.limit} status={b.status} label={`${categoryLabel("expense", b.category)} budget used`} />
                       <span className={cn("text-xs", STATUS_COLOUR[b.status])}>
-                        {STATUS_TEXT[b.status]} · {b.remaining >= 0 ? `${rupees(b.remaining)} left` : `${rupees(-b.remaining)} over`}
+                        {b.remaining === 0 ? "Limit reached" : STATUS_TEXT[b.status]} · {b.remaining >= 0 ? `${rupees(b.remaining)} left` : `${rupees(-b.remaining)} over`}
                       </span>
                     </div>
                   ))}
@@ -222,7 +225,7 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
                         <span className="truncate font-medium">{categoryLabel(e.kind, e.category)}{e.description && <span className="font-normal text-muted"> · {e.description}</span>}</span>
                         <span className="text-xs text-muted">{dayLabel(e.occurred_on)}</span>
                       </span>
-                      <span className={cn("shrink-0 font-semibold", e.kind === "income" ? "text-mint" : "text-text")}>
+                      <span className={cn("shrink-0 font-semibold", e.kind === "income" ? "text-success" : "text-text")}>
                         {e.kind === "income" ? "+" : "−"}{rupees(e.amount)}
                       </span>
                     </div>

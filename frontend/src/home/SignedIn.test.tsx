@@ -93,8 +93,28 @@ test("sign out is on the profile page", async () => {
   render(<App />);
   await screen.findByRole("heading", { level: 1, name: "Rahul" });
   await user.click(screen.getAllByRole("button", { name: "Profile" })[0]);
-  await user.click(await screen.findByRole("button", { name: "Sign out" }));
-  await waitFor(() => expect(auth.signOut).toHaveBeenCalled());
+  await screen.findByRole("heading", { level: 1, name: "Your profile" });
+  await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Sign out" }));
+  await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+});
+
+test("the side panel (computer) also has the account box with sign out", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  const sidePanelSignOut = screen.getAllByRole("button", { name: "Sign out" }).find((b) => !screen.getByRole("main").contains(b))!;
+  expect(screen.getByText("rahul@example.com")).toBeInTheDocument();
+  await user.click(sidePanelSignOut);
+  await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+});
+
+test("the 6-month chart is a smooth area chart that describes itself", async () => {
+  summaryBody = { total_income: 28000, total_expenses: 14000, remaining: 14000, savings_rate_percent: 50, entry_count: 4 };
+  trendBody = [{ month: "2026-10", income: 0, expenses: 1200, remaining: -1200 }, { month: "2026-11", income: 28000, expenses: 14000, remaining: 14000 }];
+  render(<App />);
+  const chart = await screen.findByRole("img", { name: /Money received and spent over the last 6 months/ });
+  expect(chart.getAttribute("aria-label")).toContain("Received ₹28,000, Spent ₹14,000");
+  expect(chart.querySelectorAll("path").length).toBeGreaterThanOrEqual(4); // 2 lines + 2 fills
 });
 
 test("spending donut shows the top 5 and groups the rest", () => {

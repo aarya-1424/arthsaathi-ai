@@ -22,7 +22,11 @@ export function nextSteps(summary: Summary | null): NextStep[] {
     steps.push({ id: "overspent", text: `You've spent ${rupees(-summary.remaining)} more than you received this month`, action: "money", tone: "danger" });
   }
   for (const b of summary.budgets.filter((b) => b.status === "near")) {
-    steps.push({ id: `near-${b.category}`, text: `Your ${categoryLabel("expense", b.category)} budget is almost used: ${rupees(b.remaining)} left`, action: "money", tone: "warn" });
+    const name = categoryLabel("expense", b.category);
+    const text = b.remaining === 0
+      ? `You've used all of your ${name} budget`
+      : `Your ${name} budget is almost used: ${rupees(b.remaining)} left`;
+    steps.push({ id: `near-${b.category}`, text, action: "money", tone: "warn" });
   }
   if (summary.entry_count > 0 && summary.budgets.length === 0) {
     steps.push({ id: "set-budget", text: "Set a monthly budget to see how you're doing", action: "money", tone: "info" });

@@ -2,10 +2,10 @@ import { ArrowRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { api, ApiError } from "../lib/api";
-import { TREND_SERIES } from "../money/MoneyPage";
+import { trendSeries } from "../money/MoneyPage";
 import { currentMonth, monthLabel, shortMonth, type MonthTotal, type Summary } from "../money/types";
 import { OCCUPATIONS, rupees, type Profile } from "../profile/types";
-import { BarChart } from "../ui/charts";
+import { AreaChart } from "../ui/charts";
 import { Button, Card, cn, CountUpRupees } from "../ui/components";
 
 function greeting(): string {
@@ -75,7 +75,7 @@ export function HomePage(props: { profile: Profile; onGo: (view: "money" | "prof
             <p className="text-sm text-muted">{summary.remaining < 0 ? "Overspent" : "Left"} in {monthLabel(month)}</p>
             <CountUpRupees value={summary.remaining} className={cn("mt-1 block text-4xl font-semibold tracking-tight", summary.remaining < 0 && "text-danger")} />
             {summary.savings_rate_percent !== null && summary.remaining > 0 && (
-              <p className="mt-2 text-sm text-mint">You kept {summary.savings_rate_percent}% of what you received.</p>
+              <p className="mt-2 text-sm text-accent">You kept {summary.savings_rate_percent}% of what you received.</p>
             )}
           </Card>
           <Card interactive className="cursor-pointer" onClick={() => props.onGo("money")}>
@@ -98,14 +98,14 @@ export function HomePage(props: { profile: Profile; onGo: (view: "money" | "prof
         <Card className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Last 6 months</h2>
-            <button type="button" onClick={() => props.onGo("money")} className="flex items-center gap-1 text-sm text-muted transition hover:text-mint">
+            <button type="button" onClick={() => props.onGo("money")} className="flex items-center gap-1 text-sm text-muted transition hover:text-accent">
               My Money <ArrowRight size={14} aria-hidden="true" />
             </button>
           </div>
-          <BarChart
+          <AreaChart
             label="Money received and spent over the last 6 months"
-            series={TREND_SERIES}
-            groups={trend.map((t) => ({ label: shortMonth(t.month), values: [t.income, t.expenses] }))}
+            labels={trend.map((t) => shortMonth(t.month))}
+            series={trendSeries(trend)}
           />
         </Card>
       )}

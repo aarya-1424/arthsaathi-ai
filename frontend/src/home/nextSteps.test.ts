@@ -42,3 +42,8 @@ test("never more than 3 steps", () => {
   const many = ["food", "rent", "shopping", "transport"].map((c) => budget(c, 1000, 2000, "over"));
   expect(nextSteps(summary({ budgets: many }))).toHaveLength(3);
 });
+
+test("a budget used exactly to the limit says so plainly", () => {
+  const steps = nextSteps(summary({ budgets: [budget("rent", 8000, 8000, "near")] }));
+  expect(steps[0].text).toBe("You've used all of your Rent budget");
+});

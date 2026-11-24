@@ -41,7 +41,7 @@ export function BudgetEditor(props: { month: string; current: BudgetLimit[]; onS
           {EXPENSE_CATEGORIES.map((c) => (
             <label key={c.value} className="flex items-center justify-between gap-3 text-sm">
               <span>{c.label}</span>
-              <span className="flex w-36 items-center rounded-xl border border-line bg-ink-800 transition focus-within:border-mint/60">
+              <span className="flex w-36 items-center rounded-xl border border-line bg-ink-800 transition focus-within:border-accent/60">
                 <span aria-hidden="true" className="pl-3 text-muted">₹</span>
                 <input
                   aria-label={`${c.label} limit`}

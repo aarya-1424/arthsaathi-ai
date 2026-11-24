@@ -57,3 +57,18 @@ test("bar chart with all zeros still draws safely", () => {
   );
   for (const rect of container.querySelectorAll("rect")) expect(Number(rect.getAttribute("height"))).toBe(0);
 });
+
+import { smoothPath } from "./charts";
+
+test("smooth curve never goes above the top or below the zero line", () => {
+  // A sharp dip and spike would make a normal curve overshoot; ours is kept inside.
+  const d = smoothPath([{ x: 0, y: 100 }, { x: 10, y: 0 }, { x: 20, y: 100 }, { x: 30, y: 0 }], 0, 100);
+  const ys = [...d.matchAll(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)].map((m) => Number(m[2]));
+  expect(Math.min(...ys)).toBeGreaterThanOrEqual(0);
+  expect(Math.max(...ys)).toBeLessThanOrEqual(100);
+});
+
+test("smooth curve handles one point or none", () => {
+  expect(smoothPath([], 0, 100)).toBe("");
+  expect(smoothPath([{ x: 5, y: 5 }], 0, 100)).toBe("M 5 5");
+});

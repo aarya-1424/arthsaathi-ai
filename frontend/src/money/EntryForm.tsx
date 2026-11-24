@@ -52,8 +52,8 @@ export function EntryForm(props: { editing?: Entry; defaultDate: string; onSaved
     <label
       className={cn(
         "flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full text-sm transition",
-        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-mint",
-        kind === value ? "bg-mint font-semibold text-on-mint" : "text-muted hover:text-text",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
+        kind === value ? "bg-accent font-semibold text-on-accent" : "text-muted hover:text-text",
       )}
     >
       <input type="radio" name="kind" className="sr-only" checked={kind === value} onChange={() => switchKind(value)} />
