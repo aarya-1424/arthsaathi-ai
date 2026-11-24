@@ -10,7 +10,7 @@ from typing import Annotated, Any
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
 
@@ -22,6 +22,9 @@ _ALLOWED_ALGORITHMS = ["ES256", "RS256"]
 class CurrentUser(BaseModel):
     id: str
     email: str | None = None
+    # The raw login token, kept only so we can pass it on to the database.
+    # exclude=True means it is never sent back in any API response.
+    token: str = Field(default="", exclude=True, repr=False)
 
 
 @lru_cache
@@ -62,4 +65,4 @@ def get_current_user(
     except Exception as exc:  # any problem means "not signed in"; never reveal why
         logger.info("Rejected token: %s", type(exc).__name__)
         raise _unauthorized() from None
-    return CurrentUser(id=claims["sub"], email=claims.get("email"))
+    return CurrentUser(id=claims["sub"], email=claims.get("email"), token=creds.credentials)

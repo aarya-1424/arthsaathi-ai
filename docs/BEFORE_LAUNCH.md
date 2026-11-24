@@ -14,6 +14,7 @@ Things we knowingly postponed for the demo/pitch stage. Do these before real use
 - [ ] Check Indian rules on data protection (DPDP Act) and on any investment/insurance/lending features.
 
 ## Safety
+- [ ] Turn on Supabase "Leaked password protection" (blocks passwords found in data leaks; may need a paid plan).
 - [ ] Security review and penetration check.
 - [ ] AI usage limits per user and cost alerts.
 - [ ] Backups and error monitoring switched on.

@@ -1,34 +1,80 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { AuthScreen, NewPasswordScreen } from "./auth/AuthScreen";
+import { api, ApiError } from "./lib/api";
 import { authConfigured, supabase } from "./lib/supabase";
+import { ProfileWizard } from "./profile/ProfileWizard";
+import { OCCUPATIONS, rupees, type Profile } from "./profile/types";
 
-type Status = "checking" | "ok" | "down";
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
-function Home() {
+function Home(props: { profile: Profile; onEdit: () => void }) {
   const { session } = useAuth();
-  const [status, setStatus] = useState<Status>("checking");
-
-  useEffect(() => {
-    fetch("/api/me", { headers: { Authorization: `Bearer ${session?.access_token ?? ""}` } })
-      .then((r) => setStatus(r.ok ? "ok" : "down"))
-      .catch(() => setStatus("down"));
-  }, [session]);
+  const f = props.profile.financial!;
+  const name = props.profile.display_name || session?.user.email?.split("@")[0] || "there";
+  const occupation = OCCUPATIONS.find((o) => o.value === f.occupation)?.label;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-3 px-4">
-      <h1 className="text-3xl font-semibold">ArthSaathi</h1>
-      <p>You are signed in{session?.user.email ? ` as ${session.user.email}` : ""}.</p>
-      <p role="status" className="text-sm opacity-70">
-        {status === "checking" && "Checking server..."}
-        {status === "ok" && "Server connected."}
-        {status === "down" && "Server is not reachable right now."}
-      </p>
-      <button className="w-fit rounded border px-3 py-1 text-sm" onClick={() => supabase.auth.signOut()}>
-        Sign out
-      </button>
+    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-8">
+      <h1 className="text-2xl font-semibold">{greeting()}, {name}.</h1>
+      <p>Let's make your money work better for you.</p>
+      <section aria-label="Your profile summary" className="rounded border p-4 text-sm">
+        <p>{occupation}</p>
+        <p>Monthly income: {rupees(f.monthly_income)}</p>
+        <p>Monthly expenses: {rupees(f.monthly_expenses)}</p>
+        {f.monthly_savings !== null && <p>Monthly savings: {rupees(f.monthly_savings)}</p>}
+        {f.monthly_emi !== null && f.monthly_emi > 0 && <p>Monthly EMIs: {rupees(f.monthly_emi)}</p>}
+      </section>
+      <p className="text-sm opacity-70">Your full dashboard is coming in a later step.</p>
+      <div className="flex gap-2">
+        <button className="rounded border px-3 py-1 text-sm" onClick={props.onEdit}>Edit my profile</button>
+        <button className="rounded border px-3 py-1 text-sm" onClick={() => supabase.auth.signOut()}>Sign out</button>
+      </div>
     </main>
   );
+}
+
+function SignedIn() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+
+  const load = useCallback(() => {
+    setError("");
+    api<Profile>("/profile")
+      .then(setProfile)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again."));
+  }, []);
+
+  useEffect(load, [load]);
+
+  if (error) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-3 px-4">
+        <p role="alert">{error}</p>
+        <button className="w-fit rounded border px-3 py-1" onClick={load}>Try again</button>
+      </main>
+    );
+  }
+  if (!profile) return <main className="p-4">Loading your profile...</main>;
+
+  if (!profile.onboarding_complete) {
+    return <ProfileWizard initial={profile} mode="onboarding" onSaved={setProfile} />;
+  }
+  if (editing) {
+    return (
+      <ProfileWizard
+        initial={profile}
+        mode="edit"
+        onSaved={(p) => { setProfile(p); setEditing(false); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+  return <Home profile={profile} onEdit={() => setEditing(true)} />;
 }
 
 function Gate() {
@@ -42,7 +88,7 @@ function Gate() {
   }
   if (loading) return <main className="p-4">Loading...</main>;
   if (recovering) return <NewPasswordScreen />;
-  return session ? <Home /> : <AuthScreen />;
+  return session ? <SignedIn /> : <AuthScreen />;
 }
 
 export default function App() {
