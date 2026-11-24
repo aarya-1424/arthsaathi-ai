@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
-import { AuthScreen, NewPasswordScreen } from "./auth/AuthScreen";
+import { NewPasswordScreen } from "./auth/AuthScreen";
+import { Landing } from "./landing/Landing";
 import { api, ApiError } from "./lib/api";
 import { authConfigured, supabase } from "./lib/supabase";
 import { MoneyPage } from "./money/MoneyPage";
@@ -84,14 +85,14 @@ function Gate() {
   const { session, loading, recovering } = useAuth();
   if (!authConfigured) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+      <main className="theme-dark flex min-h-dvh items-center justify-center px-4">
         <p role="alert">Login is not set up yet. Add the Supabase settings to frontend/.env.local.</p>
       </main>
     );
   }
-  if (loading) return <main className="p-4">Loading...</main>;
+  if (loading) return <main className="theme-dark min-h-dvh p-6 text-muted">Loading...</main>;
   if (recovering) return <NewPasswordScreen />;
-  return session ? <SignedIn /> : <AuthScreen />;
+  return session ? <SignedIn /> : <Landing />;
 }
 
 export default function App() {

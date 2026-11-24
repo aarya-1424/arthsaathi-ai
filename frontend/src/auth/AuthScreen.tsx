@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { X } from "lucide-react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
+import { Button, fieldClass, GlowBackground } from "../ui/components";
+import { Logo, LogoMark } from "../ui/Logo";
 import { useAuth } from "./AuthProvider";
 
 type Mode = "signin" | "signup" | "forgot";
@@ -16,14 +19,22 @@ function friendly(message: string): string {
   return "Something went wrong. Please try again.";
 }
 
-export function AuthScreen() {
-  const [mode, setMode] = useState<Mode>("signin");
+const TITLES: Record<Mode, { title: string; subtitle: string }> = {
+  signin: { title: "Welcome back", subtitle: "Sign in to see your money." },
+  signup: { title: "Create your account", subtitle: "It takes less than a minute." },
+  forgot: { title: "Reset your password", subtitle: "We'll email you a reset link." },
+};
+
+/** The sign in / sign up / forgot password form. */
+export function AuthForm({ initialMode = "signin" }: { initialMode?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const ids = { name: useId(), email: useId(), password: useId(), title: useId() };
 
   function switchTo(next: Mode) {
     setMode(next);
@@ -67,48 +78,120 @@ export function AuthScreen() {
     }
   }
 
-  const title = mode === "signin" ? "Welcome back" : mode === "signup" ? "Create your account" : "Reset your password";
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4">
-      <h1 className="text-3xl font-semibold">ArthSaathi</h1>
-      <h2 className="text-xl">{title}</h2>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3" noValidate>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-semibold tracking-tight" data-auth-title>{TITLES[mode].title}</h2>
+        <p className="text-sm text-muted">{TITLES[mode].subtitle}</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {mode === "signup" && (
-          <label className="flex flex-col gap-1 text-sm">
-            What should we call you?
-            <input className="rounded border p-2" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="given-name" />
-          </label>
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label htmlFor={ids.name}>What should we call you?</label>
+            <input id={ids.name} className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="given-name" />
+          </div>
         )}
-        <label className="flex flex-col gap-1 text-sm">
-          Email
-          <input className="rounded border p-2" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-        </label>
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor={ids.email}>Email</label>
+          <input id={ids.email} className={fieldClass} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" />
+        </div>
         {mode !== "forgot" && (
-          <label className="flex flex-col gap-1 text-sm">
-            Password
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label htmlFor={ids.password}>Password</label>
             <input
-              className="rounded border p-2"
+              id={ids.password}
+              className={fieldClass}
               type="password"
               required
               value={password}
+              aria-invalid={error.startsWith("Password") || undefined}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
             />
-          </label>
+            {mode === "signup" && <span className="text-xs text-muted">At least 8 characters.</span>}
+          </div>
         )}
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-        {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
-        <button type="submit" disabled={busy} className="rounded bg-emerald-800 p-2 text-white disabled:opacity-60">
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {notice && <p role="status" className="text-sm text-mint">{notice}</p>}
+        <Button type="submit" variant="primary" disabled={busy} className="w-full">
           {busy ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Sign up" : "Send reset link"}
-        </button>
+        </Button>
       </form>
-      <div className="flex flex-col gap-1 text-sm">
-        {mode !== "signin" && <button className="text-left underline" onClick={() => switchTo("signin")}>I already have an account</button>}
-        {mode !== "signup" && <button className="text-left underline" onClick={() => switchTo("signup")}>Create a new account</button>}
-        {mode === "signin" && <button className="text-left underline" onClick={() => switchTo("forgot")}>Forgot password?</button>}
+
+      <div className="flex flex-col items-start gap-1 text-sm">
+        {mode !== "signin" && <button type="button" className="text-muted underline-offset-4 hover:text-text hover:underline" onClick={() => switchTo("signin")}>I already have an account</button>}
+        {mode !== "signup" && <button type="button" className="text-muted underline-offset-4 hover:text-text hover:underline" onClick={() => switchTo("signup")}>Create a new account</button>}
+        {mode === "signin" && <button type="button" className="text-muted underline-offset-4 hover:text-text hover:underline" onClick={() => switchTo("forgot")}>Forgot password?</button>}
       </div>
-    </main>
+
+      <p className="text-xs text-muted">We will never ask for your bank password, UPI PIN, OTP or card PIN.</p>
+    </div>
+  );
+}
+
+/**
+ * Sign in / sign up as a glass sheet over the landing page.
+ * Phone: slides up from the bottom. Computer: floats on the right.
+ * Escape or the close button closes it, and focus goes back where it was.
+ */
+export function AuthSheet({ initialMode, onClose }: { initialMode: Mode; onClose: () => void }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    const firstInput = panel.current?.querySelector("input");
+    firstInput?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden"; // page behind doesn't scroll
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      before?.focus?.();
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={
+          "glass sheet-in absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-[2rem] p-6 pb-8 " +
+          "lg:inset-x-auto lg:top-4 lg:right-4 lg:bottom-4 lg:w-[26rem] lg:rounded-[2rem] lg:p-8"
+        }
+      >
+        <div className="mb-6 flex items-center justify-between">
+          <span id={titleId} className="sr-only">ArthSaathi account</span>
+          <Logo size={30} />
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text">
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+        <AuthForm initialMode={initialMode} />
+      </div>
+    </div>
+  );
+}
+
+/** Kept for places that need a full-page sign in (for example, if the landing page is skipped). */
+export function AuthScreen() {
+  return (
+    <div className="theme-dark relative isolate flex min-h-dvh items-center justify-center px-4 py-10">
+      <GlowBackground />
+      <div className="glass w-full max-w-md rounded-[2rem] p-6 sm:p-8">
+        <div className="mb-6"><Logo size={30} /></div>
+        <AuthForm />
+      </div>
+    </div>
   );
 }
 
@@ -118,6 +201,7 @@ export function NewPasswordScreen() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const id = useId();
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -135,19 +219,25 @@ export function NewPasswordScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4">
-      <h1 className="text-3xl font-semibold">ArthSaathi</h1>
-      <h2 className="text-xl">Choose a new password</h2>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          New password
-          <input className="rounded border p-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-        </label>
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-        <button type="submit" disabled={busy} className="rounded bg-emerald-800 p-2 text-white disabled:opacity-60">
-          {busy ? "Please wait..." : "Save new password"}
-        </button>
-      </form>
-    </main>
+    <div className="theme-dark relative isolate flex min-h-dvh items-center justify-center px-4 py-10">
+      <GlowBackground />
+      <div className="glass flex w-full max-w-md flex-col gap-6 rounded-[2rem] p-6 sm:p-8">
+        <LogoMark size={40} />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Choose a new password</h1>
+          <p className="text-sm text-muted">At least 8 characters.</p>
+        </div>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label htmlFor={id}>New password</label>
+            <input id={id} className={fieldClass} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+          </div>
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          <Button type="submit" variant="primary" disabled={busy} className="w-full">
+            {busy ? "Please wait..." : "Save new password"}
+          </Button>
+        </form>
+      </div>
+    </div>
   );
 }
