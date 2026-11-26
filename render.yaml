@@ -1,0 +1,25 @@
+# Render settings for the ArthSaathi server (FastAPI).
+# In Render: New > Blueprint > pick this GitHub repo. Render reads this file.
+# Values marked "sync: false" are typed in by you in the Render dashboard (never committed here).
+services:
+  - type: web
+    name: arthsaathi-api
+    runtime: python
+    plan: free
+    region: singapore # closest Render region to India
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true # redeploys when main changes on GitHub
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: ENVIRONMENT
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: CORS_ORIGINS # the Vercel website address, e.g. https://arthsaathi.vercel.app
+        sync: false

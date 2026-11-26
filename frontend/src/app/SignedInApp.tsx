@@ -89,6 +89,21 @@ function ProfilePage({ profile, onEdit }: { profile: Profile; onEdit: () => void
   );
 }
 
+/** After 5 seconds, explain the wait: the free server sleeps when unused and takes up to a minute to wake. */
+function SlowHint() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setShow(true), 5000);
+    return () => clearTimeout(id);
+  }, []);
+  if (!show) return null;
+  return (
+    <p role="status" className="max-w-xs text-sm text-muted">
+      Waking up the server. The first visit after a break can take up to a minute.
+    </p>
+  );
+}
+
 function AccountBox({ name, onProfile }: { name: string | null; onProfile: () => void }) {
   const { session } = useAuth();
   const display = name || session?.user.email?.split("@")[0] || "You";
@@ -141,6 +156,7 @@ export default function SignedInApp() {
       <FullScreen>
         <LogoMark size={44} />
         <p className="text-muted">Loading your profile...</p>
+        <SlowHint />
       </FullScreen>
     );
   }

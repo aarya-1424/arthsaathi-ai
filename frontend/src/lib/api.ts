@@ -1,5 +1,11 @@
 import { supabase } from "./supabase";
 
+/**
+ * Where our server lives. Empty while developing (the dev server forwards /api to localhost:8000).
+ * On the live site this is the Render address, set as VITE_API_URL in Vercel.
+ */
+export const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "").replace(/\/+$/, "");
+
 export class ApiError extends Error {
   status: number;
   fields: string[];
@@ -15,7 +21,7 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   const { data } = await supabase.auth.getSession();
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method: options.method ?? "GET",
       headers: {
         "Content-Type": "application/json",
