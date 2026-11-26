@@ -1,10 +1,11 @@
 import {
-  ArrowRight, FileText, Landmark, Languages, Lock, PieChart, ShieldCheck, Sparkles, Target, UserCheck, Wallet,
+  ArrowRight, FileText, Landmark, Languages, Lock, PieChart, ShieldCheck, Sparkles, Target, TrendingUp, UserCheck, Wallet,
 } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { AuthSheet } from "../auth/AuthScreen";
 import { CHART_COLOURS, Donut, Legend } from "../ui/charts";
 import { Button, Card, cn, fieldClass, GlowBackground } from "../ui/components";
+import { SiteFooter } from "../legal/SiteFooter";
 import { Logo, LogoMark } from "../ui/Logo";
 import { split503020 } from "./split";
 
@@ -28,6 +29,7 @@ export function Landing() {
         <HowItWorks />
         <Trust />
         <Closing onStart={() => setSheet("signup")} />
+        <SiteFooter />
       </main>
 
       {sheet && <AuthSheet initialMode={sheet} onClose={() => setSheet(null)} />}
@@ -104,11 +106,8 @@ function TryIt() {
 
   return (
     <div className="relative -mt-2 w-full max-w-5xl rounded-[1.75rem] border border-accent/30 bg-ink-900/90 p-2 text-left shadow-[0_-20px_80px_-20px_rgb(255_106_43/0.45)]">
-      <div className="flex items-center gap-2 px-4 py-3">
-        <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#ff5f57]/80" />
-        <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#febc2e]/80" />
-        <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#28c840]/80" />
-        <span className="ml-3 truncate text-xs text-muted">Try it<span className="hidden sm:inline"> · sample split of your income</span></span>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="text-sm font-semibold">Try it with your income</span>
         <span className="ml-auto rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">Example</span>
       </div>
       <div className="grid gap-4 rounded-[1.4rem] border border-line bg-ink-950/60 p-5 md:grid-cols-[1fr_1.2fr] md:p-7">
@@ -160,54 +159,57 @@ function TryIt() {
   );
 }
 
-// ---------- Features (tiles of different sizes) ----------
+// ---------- Features: what works today first, then what is on the way ----------
+
+const ON_THE_WAY = [
+  { icon: Target, title: "Goals", text: "See how much to save each month and when you'll get there." },
+  { icon: Languages, title: "Ask in Hindi or English", text: "Ask money questions in English, Hindi or Hinglish." },
+  { icon: FileText, title: "Documents explained", text: "Understand a salary slip or Form 16, only if you choose to upload it." },
+  { icon: Landmark, title: "Government schemes", text: "Find schemes you may be eligible for, with official sources." },
+];
 
 function Features() {
   return (
     <section id="features" aria-labelledby="features-title" className="flex scroll-mt-28 flex-col gap-8">
       <SectionTitle id="features-title" kicker="What it does" title="Everything about your money, in one calm place" />
       <div className="grid gap-4 md:grid-cols-6">
-        <Tile className="md:col-span-4" icon={PieChart} title="See where your money goes" status="now">
+        <Tile className="md:col-span-4" icon={PieChart} title="See where your money goes">
           Record what you receive and spend. ArthSaathi shows what's left, where it went, and how this month compares with last month.
         </Tile>
-        <Tile className="md:col-span-2" icon={Wallet} title="Budgets that guide you" status="now">
+        <Tile className="md:col-span-2" icon={Wallet} title="Budgets that guide you">
           Set limits per category. Bars turn yellow when you're close and red when you go over.
         </Tile>
-        <Tile className="md:col-span-2" icon={Target} title="Goals you can reach" status="soon">
-          A laptop, an emergency fund, college fees. See how much to save each month and when you'll get there.
+        <Tile className="md:col-span-2" icon={TrendingUp} title="Six months at a glance">
+          A simple chart of what you received and spent, month by month.
         </Tile>
-        <Tile className="md:col-span-4" icon={Languages} title="Ask in English, Hindi or Hinglish" status="soon">
-          <span className="mt-4 flex flex-col gap-2 text-sm">
-            <span className="w-fit max-w-[85%] self-end rounded-2xl rounded-br-md bg-accent/15 px-3 py-2 text-text">
-              Mujhe ek saal mein ₹50,000 bachane hain. Kaise?
-            </span>
-            <span className="w-fit max-w-[85%] rounded-2xl rounded-bl-md border border-line bg-ink-800 px-3 py-2 text-text">
-              That's about ₹4,167 a month. Let's look at your expenses and find it together.
-            </span>
-            <span className="text-xs text-muted">Example conversation</span>
-          </span>
+        <Tile className="md:col-span-4" icon={Sparkles} title="Next steps, from your own numbers">
+          Your Saathi points out what needs attention, like a budget that's almost used up, using only what you've recorded.
         </Tile>
-        <Tile className="md:col-span-3" icon={FileText} title="Documents, explained simply" status="soon">
-          Upload a salary slip or Form 16 only if you want to. We explain each line in plain words. You can delete it any time.
-        </Tile>
-        <Tile className="md:col-span-3" icon={Landmark} title="Government schemes for you" status="soon">
-          Find schemes you may be eligible for, with official sources and the date we last checked them.
-        </Tile>
+      </div>
+
+      <div aria-labelledby="soon-title" role="group" className="flex flex-col gap-4 rounded-card border border-dashed border-line p-5">
+        <h3 id="soon-title" className="text-sm font-semibold text-muted">On the way</h3>
+        <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+          {ON_THE_WAY.map((f) => (
+            <li key={f.title} className="flex gap-3 text-sm">
+              <f.icon size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-muted" />
+              <span className="flex flex-col gap-0.5">
+                <span className="font-semibold">{f.title}</span>
+                <span className="text-xs text-muted">{f.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
 }
 
-function Tile(props: { className?: string; icon: typeof Wallet; title: string; status: "now" | "soon"; children: ReactNode }) {
+function Tile(props: { className?: string; icon: typeof Wallet; title: string; children: ReactNode }) {
   const Icon = props.icon;
   return (
     <Card interactive className={cn("flex flex-col gap-3", props.className)}>
-      <div className="flex items-center justify-between">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/12 text-accent"><Icon size={20} aria-hidden="true" /></span>
-        <span className={cn("rounded-full px-2.5 py-0.5 text-xs", props.status === "now" ? "bg-accent/15 text-accent" : "border border-line text-muted")}>
-          {props.status === "now" ? "Available now" : "Coming soon"}
-        </span>
-      </div>
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/12 text-accent"><Icon size={20} aria-hidden="true" /></span>
       <h3 className="text-lg font-semibold">{props.title}</h3>
       <div className="text-sm text-muted">{props.children}</div>
     </Card>
@@ -285,11 +287,7 @@ function Closing({ onStart }: { onStart: () => void }) {
         <Button variant="primary" onClick={onStart} className="relative min-h-12 px-7 text-base">
           Get started <ArrowRight size={18} aria-hidden="true" />
         </Button>
-        <p className="relative max-w-2xl text-xs text-muted">
-          ArthSaathi is an educational and planning tool. It is not a registered investment adviser, chartered accountant, bank
-          or government body. For big financial decisions, please check with a qualified professional.
-        </p>
-        <p className="relative text-xs text-muted">© {new Date().getFullYear()} ArthSaathi</p>
+        <p className="relative text-sm text-muted">Free to use. No bank login needed.</p>
       </Card>
     </section>
   );

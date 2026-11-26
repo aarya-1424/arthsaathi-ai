@@ -87,14 +87,14 @@ async function addEntry(user: ReturnType<typeof userEvent.setup>, opts: { receiv
 }
 
 test("empty month shows a friendly starting message", async () => {
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   expect(await screen.findByText(/Nothing recorded for/)).toBeInTheDocument();
   expect(screen.getByText(monthLabel(currentMonth()))).toBeInTheDocument();
 });
 
 test("adding income and an expense updates the totals and the list", async () => {
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText(/Nothing recorded/);
 
   await addEntry(user, { received: true, amount: "28000", category: "salary" });
@@ -115,7 +115,7 @@ test("adding income and an expense updates the totals and the list", async () =>
 
 test("the form refuses empty amounts and missing categories without calling the server", async () => {
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText(/Nothing recorded/);
   await user.click(screen.getByRole("button", { name: "Add entry" }));
   const form = screen.getByRole("form", { name: "Add entry" });
@@ -130,7 +130,7 @@ test("the form refuses empty amounts and missing categories without calling the 
 
 test("switching between spent and received changes the categories", async () => {
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText(/Nothing recorded/);
   await user.click(screen.getByRole("button", { name: "Add entry" }));
   const form = screen.getByRole("form", { name: "Add entry" });
@@ -143,7 +143,7 @@ test("switching between spent and received changes the categories", async () => 
 test("an entry can be edited", async () => {
   const user = userEvent.setup();
   rows = [{ id: "a", kind: "expense", amount: 450, occurred_on: today, category: "food", description: "Lunch", notes: null, created_at: "" }];
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText("−₹450");
   await user.click(screen.getByRole("button", { name: "Edit" }));
   const form = screen.getByRole("form", { name: "Change entry" });
@@ -158,7 +158,7 @@ test("an entry can be edited", async () => {
 test("deleting asks first, and No keeps the entry", async () => {
   const user = userEvent.setup();
   rows = [{ id: "a", kind: "expense", amount: 450, occurred_on: today, category: "food", description: null, notes: null, created_at: "" }];
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText("−₹450");
   await user.click(screen.getByRole("button", { name: "Delete" }));
   await user.click(screen.getByRole("button", { name: "No" }));
@@ -170,7 +170,7 @@ test("deleting asks first, and No keeps the entry", async () => {
 
 test("setting a budget sends only the filled categories", async () => {
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText(/Nothing recorded/);
   await user.click(screen.getByRole("button", { name: "Set budget" }));
   await user.type(screen.getByLabelText("Food limit"), "5000");
@@ -185,7 +185,7 @@ test("setting a budget sends only the filled categories", async () => {
 
 test("months can be browsed back, but not into the future", async () => {
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   await screen.findByText(/Nothing recorded/);
   expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Previous month" }));
@@ -198,7 +198,7 @@ test("months can be browsed back, but not into the future", async () => {
 test("a loading failure shows a message and Try again works", async () => {
   failNext = 503;
   const user = userEvent.setup();
-  render(<MoneyPage onBack={vi.fn()} />);
+  render(<MoneyPage />);
   expect(await screen.findByText(/could not reach the database/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByText(/Nothing recorded/)).toBeInTheDocument();

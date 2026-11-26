@@ -10,7 +10,10 @@ Things we knowingly postponed for the demo/pitch stage. Do these before real use
 - [ ] Add the live website address in Supabase (Authentication > URL Configuration).
 
 ## Legal and trust
-- [ ] Lawyer reviews Privacy Policy, Terms and Financial Disclaimer.
+- [ ] Lawyer reviews Privacy Policy, Terms and Financial Disclaimer (first plain-language versions are live at /privacy, /terms, /disclaimer; they are NOT lawyer-reviewed yet).
+- [ ] Set a public contact email (`VITE_CONTACT_EMAIL` in Vercel) so the footer and legal pages show how to reach us and how to ask for account deletion.
+- [ ] Build account deletion inside the app (the Privacy Policy currently says "ask us").
+- [ ] When a domain is bought: update the link-preview address in `frontend/index.html` (og:url, og:image).
 - [ ] Check Indian rules on data protection (DPDP Act) and on any investment/insurance/lending features.
 
 ## Safety

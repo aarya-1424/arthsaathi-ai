@@ -1,17 +1,16 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Home, MessageCircle, Target, User, Wallet } from "lucide-react";
+import { Home, Plus, User, Wallet } from "lucide-react";
+import { MemoryRouter } from "react-router-dom";
 import { expect, test, vi } from "vitest";
 import { AppShell } from "./AppShell";
 import { Button, Chip, CountUpRupees, Progress } from "./components";
 
 const NAV = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "money", label: "My Money", icon: Wallet },
-  { id: "goals", label: "Goals", icon: Target },
-  { id: "profile", label: "Profile", icon: User },
+  { to: "/", label: "Home", icon: Home },
+  { to: "/money", label: "My Money", icon: Wallet },
+  { to: "/profile", label: "Profile", icon: User },
 ];
-const ASK = { id: "ask", label: "Ask ArthSaathi", icon: MessageCircle };
 
 test("buttons are real buttons and don't submit forms by accident", () => {
   render(<form><Button>Cancel</Button></form>);
@@ -68,31 +67,43 @@ test("count-up skips the animation when the user prefers less motion", () => {
   vi.unstubAllGlobals();
 });
 
-test("app shell has a rail (computer) and a dock (phone), with the current page marked", async () => {
-  const onNavigate = vi.fn();
-  const user = userEvent.setup();
-  render(<AppShell items={NAV} ask={ASK} active="money" onNavigate={onNavigate}><p>Page content</p></AppShell>);
+function shell(at: string, onAdd = vi.fn(), side?: React.ReactNode) {
+  return render(
+    <MemoryRouter initialEntries={[at]}>
+      <AppShell items={NAV} action={{ label: "Add entry", icon: Plus, onClick: onAdd }} side={side}><p>Page content</p></AppShell>
+    </MemoryRouter>,
+  );
+}
 
-  const navs = screen.getAllByRole("navigation", { name: "Main" });
-  expect(navs).toHaveLength(2);
+test("app shell menus are real links, with the current page marked", () => {
+  shell("/money");
+  expect(screen.getAllByRole("navigation", { name: "Main" })).toHaveLength(2); // side panel + phone tab bar
   expect(screen.getByRole("main")).toHaveTextContent("Page content");
-  for (const current of screen.getAllByRole("button", { name: "My Money" })) {
-    expect(current).toHaveAttribute("aria-current", "page");
+  for (const link of screen.getAllByRole("link", { name: "My Money" })) {
+    expect(link).toHaveAttribute("href", "/money");
+    expect(link).toHaveAttribute("aria-current", "page");
   }
-  await user.click(screen.getAllByRole("button", { name: "Ask ArthSaathi" })[0]);
-  expect(onNavigate).toHaveBeenCalledWith("ask");
-  await user.click(screen.getAllByRole("button", { name: "Goals" })[1]);
-  expect(onNavigate).toHaveBeenCalledWith("goals");
+  for (const link of screen.getAllByRole("link", { name: "Home" })) expect(link).not.toHaveAttribute("aria-current");
 });
 
-test("the Ask button sits in the middle of the dock", () => {
-  render(<AppShell items={NAV} ask={ASK} active="home" onNavigate={vi.fn()}><p /></AppShell>);
-  const dock = screen.getAllByRole("navigation", { name: "Main" })[1];
-  const labels = Array.from(dock.querySelectorAll("button")).map((b) => b.getAttribute("aria-label") ?? b.textContent);
-  expect(labels).toEqual(["Home", "My Money", "Ask ArthSaathi", "Goals", "Profile"]);
+test("the menu only lists pages that exist (no unfinished pages)", () => {
+  shell("/");
+  const tabBar = screen.getAllByRole("navigation", { name: "Main" })[1];
+  expect(Array.from(tabBar.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Home", "My Money", "Profile"]);
+  expect(screen.queryByText(/Ask ArthSaathi|Goals/)).not.toBeInTheDocument();
+});
+
+test("the main action button works from both the side panel and the phone button", async () => {
+  const onAdd = vi.fn();
+  const user = userEvent.setup();
+  shell("/", onAdd);
+  const buttons = screen.getAllByRole("button", { name: "Add entry" });
+  expect(buttons).toHaveLength(2);
+  for (const b of buttons) await user.click(b);
+  expect(onAdd).toHaveBeenCalledTimes(2);
 });
 
 test("Saathi panel appears when provided", () => {
-  render(<AppShell items={NAV} ask={ASK} active="home" onNavigate={vi.fn()} side={<p>Next steps</p>}><p /></AppShell>);
+  shell("/", vi.fn(), <p>Next steps</p>);
   expect(screen.getByRole("complementary", { name: "Saathi panel" })).toHaveTextContent("Next steps");
 });

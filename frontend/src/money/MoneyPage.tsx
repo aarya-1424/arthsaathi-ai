@@ -31,12 +31,12 @@ export function spendingSegments(categories: Summary["categories"]): Segment[] {
   return rest > 0 ? [...top, { label: "Everything else", value: rest, color: CHART_COLOURS[5] }] : top;
 }
 
-export function MoneyPage(_props: { onBack?: () => void } = {}) {
+export function MoneyPage(props: { startAdding?: boolean } = {}) {
   const thisMonth = currentMonth();
   const [month, setMonth] = useState(thisMonth);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
-  const [panel, setPanel] = useState<Panel>({ type: "none" });
+  const [panel, setPanel] = useState<Panel>(props.startAdding ? { type: "add" } : { type: "none" });
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const latest = useRef(0); // ignore slow answers for a month the user already left
@@ -60,9 +60,14 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
 
   useEffect(() => {
     setData(null);
-    setPanel({ type: "none" });
     load();
   }, [load]);
+
+  /** Changing month closes any open form (it belonged to the month you were looking at). */
+  function changeMonth(next: string) {
+    setPanel({ type: "none" });
+    setMonth(next);
+  }
 
   function saved() {
     setPanel({ type: "none" });
@@ -89,12 +94,12 @@ export function MoneyPage(_props: { onBack?: () => void } = {}) {
         <h1 className="text-3xl font-semibold tracking-tight">My Money</h1>
         <nav aria-label="Choose month" className="glass flex items-center gap-1 rounded-full p-1">
           <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text active:scale-95"
-            aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
+            aria-label="Previous month" onClick={() => changeMonth(shiftMonth(month, -1))}>
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
           <span className="min-w-36 text-center text-sm font-semibold">{monthLabel(month)}</span>
           <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text active:scale-95 disabled:opacity-30 disabled:hover:bg-transparent"
-            aria-label="Next month" disabled={month >= thisMonth} onClick={() => setMonth(shiftMonth(month, 1))}>
+            aria-label="Next month" disabled={month >= thisMonth} onClick={() => changeMonth(shiftMonth(month, 1))}>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
         </nav>

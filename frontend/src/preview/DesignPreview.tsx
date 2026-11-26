@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../auth/AuthProvider";
 import { installSampleApi } from "./sampleApi";
 
@@ -12,6 +13,7 @@ const SignedInApp = lazy(() => import("../app/SignedInApp"));
 
 export function DesignPreview() {
   return (
+    <MemoryRouter>
     <AuthProvider>
       <div className="pointer-events-none fixed top-3 right-3 z-50 rounded-full bg-warn px-3 py-1 text-xs font-semibold text-[#1a1400]">
         Preview · sample data
@@ -20,5 +22,6 @@ export function DesignPreview() {
         <SignedInApp />
       </Suspense>
     </AuthProvider>
+    </MemoryRouter>
   );
 }
