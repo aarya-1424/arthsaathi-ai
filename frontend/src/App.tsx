@@ -1,8 +1,10 @@
 import { lazy, Suspense } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { FullScreen } from "./app/FullScreen";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { NewPasswordScreen } from "./auth/AuthScreen";
 import { Landing } from "./landing/Landing";
+import { LegalPage } from "./legal/LegalPage";
 import { authConfigured } from "./lib/supabase";
 import { LogoMark } from "./ui/Logo";
 
@@ -19,6 +21,7 @@ function Loading() {
 
 function Gate() {
   const { session, loading, recovering } = useAuth();
+  const { pathname } = useLocation();
   if (!authConfigured) {
     return (
       <FullScreen>
@@ -28,7 +31,8 @@ function Gate() {
   }
   if (loading) return <Loading />;
   if (recovering) return <NewPasswordScreen />;
-  if (!session) return <Landing />;
+  // Signed-out visitors only have the landing page; any app address sends them there.
+  if (!session) return pathname === "/" ? <Landing /> : <Navigate to="/" replace />;
   return (
     <Suspense fallback={<Loading />}>
       <SignedInApp />
@@ -38,8 +42,16 @@ function Gate() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Gate />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public pages: readable with or without an account */}
+          <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+          <Route path="/terms" element={<LegalPage kind="terms" />} />
+          <Route path="/disclaimer" element={<LegalPage kind="disclaimer" />} />
+          <Route path="*" element={<Gate />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

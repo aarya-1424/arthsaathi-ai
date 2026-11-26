@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -70,29 +71,79 @@ test("the Saathi panel suggests next steps from real data", async () => {
   expect(await within(panel).findByRole("button", { name: /Add what you received and spent this month/ })).toBeInTheDocument();
 });
 
-test("rail/dock navigation moves between pages and marks the current one", async () => {
+test("menu links move between pages, change the address and mark the current page", async () => {
   const user = userEvent.setup();
   render(<App />);
   await screen.findByRole("heading", { level: 1, name: "Rahul" });
 
-  await user.click(screen.getAllByRole("button", { name: "My Money" })[0]);
+  await user.click(screen.getAllByRole("link", { name: "My Money" })[0]);
   expect(await screen.findByRole("heading", { level: 1, name: "My Money" })).toBeInTheDocument();
-  for (const b of screen.getAllByRole("button", { name: "My Money" })) expect(b).toHaveAttribute("aria-current", "page");
+  expect(window.location.pathname).toBe("/money");
+  for (const l of screen.getAllByRole("link", { name: "My Money" })) expect(l).toHaveAttribute("aria-current", "page");
 
-  await user.click(screen.getAllByRole("button", { name: "Goals" })[0]);
-  expect(await screen.findByText("Coming soon")).toBeInTheDocument();
-
-  await user.click(screen.getAllByRole("button", { name: "Profile" })[0]);
+  await user.click(screen.getAllByRole("link", { name: "Profile" })[0]);
   expect(await screen.findByRole("heading", { level: 1, name: "Your profile" })).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/profile");
   expect(screen.getByText("Wedding")).toBeInTheDocument();
   expect(screen.getAllByText("Not shared").length).toBeGreaterThan(0);
+});
+
+test("opening or refreshing a page address lands on that page", async () => {
+  window.history.replaceState(null, "", "/money");
+  render(<App />);
+  expect(await screen.findByRole("heading", { level: 1, name: "My Money" })).toBeInTheDocument();
+});
+
+test("the browser Back button returns to the previous page", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  await user.click(screen.getAllByRole("link", { name: "My Money" })[0]);
+  await screen.findByRole("heading", { level: 1, name: "My Money" });
+  window.history.back();
+  expect(await screen.findByRole("heading", { level: 1, name: "Rahul" })).toBeInTheDocument();
+});
+
+test("an unknown address goes to Home", async () => {
+  window.history.replaceState(null, "", "/goals");
+  render(<App />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Rahul" })).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/");
+});
+
+test("Add entry opens My Money with the form ready, from any page", async () => {
+  const user = userEvent.setup();
+  render(<StrictMode><App /></StrictMode>); // StrictMode = React's development double-check, as in the real app
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  await user.click(screen.getAllByRole("button", { name: "Add entry" })[0]);
+  expect(await screen.findByRole("form", { name: "Add entry" })).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/money");
+});
+
+test("editing the profile has its own address and Cancel returns to the profile", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  await user.click(screen.getAllByRole("link", { name: "Profile" })[0]);
+  await user.click(await screen.findByRole("button", { name: "Edit my profile" }));
+  expect(await screen.findByText(/Step 1 of 4/)).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/profile/edit");
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Your profile" })).toBeInTheDocument();
+});
+
+test("no unfinished pages are offered inside the app", async () => {
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Goals|Ask ArthSaathi/ })).not.toBeInTheDocument();
 });
 
 test("sign out is on the profile page", async () => {
   const user = userEvent.setup();
   render(<App />);
   await screen.findByRole("heading", { level: 1, name: "Rahul" });
-  await user.click(screen.getAllByRole("button", { name: "Profile" })[0]);
+  await user.click(screen.getAllByRole("link", { name: "Profile" })[0]);
   await screen.findByRole("heading", { level: 1, name: "Your profile" });
   await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Sign out" }));
   await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));

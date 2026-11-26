@@ -52,7 +52,7 @@ export function SaathiPanel({ onAction }: { onAction: (action: StepAction) => vo
           ))}
         </ul>
       )}
-      <p className="text-xs text-muted">Ask ArthSaathi is coming soon: questions in English, Hindi or Hinglish.</p>
+      <p className="text-xs text-muted">Based on what you've recorded this month.</p>
     </Card>
   );
 }

@@ -23,6 +23,7 @@ Free plan note: the server sleeps after about 15 minutes without visits. The fir
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - `VITE_API_URL`: the Render address, e.g. `https://arthsaathi-api.onrender.com`
+   - `VITE_CONTACT_EMAIL` (optional): a public contact email, shown in the footer and legal pages
 4. Deploy. Note the address, e.g. `https://arthsaathi.vercel.app`.
 
 ## 3. Connect them

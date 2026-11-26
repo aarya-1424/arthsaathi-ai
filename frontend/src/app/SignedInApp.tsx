@@ -1,5 +1,6 @@
-import { Home as HomeIcon, LogOut, MessageCircle, Pencil, Target, User, Wallet } from "lucide-react";
+import { Home as HomeIcon, LogOut, Pencil, Plus, User, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { HomePage } from "../home/HomePage";
 import { SaathiPanel } from "../home/SaathiPanel";
@@ -13,28 +14,18 @@ import { Button, Card } from "../ui/components";
 import { LogoMark } from "../ui/Logo";
 import { FullScreen } from "./FullScreen";
 
-/** Everything a signed-in user sees. Loaded only after sign-in, so the landing page stays light. */
-type View = "home" | "money" | "ask" | "goals" | "profile" | "edit";
-
+/**
+ * Everything a signed-in user sees. Loaded only after sign-in, so the landing page stays light.
+ * Pages have real addresses: /  /money  /profile  /profile/edit
+ * (Goals and Ask ArthSaathi join the menu when they are built.)
+ */
 const NAV = [
-  { id: "home", label: "Home", icon: HomeIcon },
-  { id: "money", label: "My Money", icon: Wallet },
-  { id: "goals", label: "Goals", icon: Target },
-  { id: "profile", label: "Profile", icon: User },
+  { to: "/", label: "Home", icon: HomeIcon },
+  { to: "/money", label: "My Money", icon: Wallet },
+  { to: "/profile", label: "Profile", icon: User },
 ];
-const ASK = { id: "ask", label: "Ask ArthSaathi", icon: MessageCircle };
 
-function ComingSoon({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-      <Card variant="highlight" className="flex flex-col items-start gap-3">
-        <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">Coming soon</span>
-        <p className="max-w-xl text-muted">{text}</p>
-      </Card>
-    </div>
-  );
-}
+const PATHS = { money: "/money", profile: "/profile" } as const;
 
 function label(list: { value: string; label: string }[], value: string | null): string | null {
   return value ? list.find((o) => o.value === value)?.label ?? value : null;
@@ -85,6 +76,11 @@ function ProfilePage({ profile, onEdit }: { profile: Profile; onEdit: () => void
         <Button variant="primary" onClick={onEdit}><Pencil size={16} aria-hidden="true" />Edit my profile</Button>
         <Button variant="ghost" onClick={() => supabase.auth.signOut()}><LogOut size={16} aria-hidden="true" />Sign out</Button>
       </div>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <Link to="/privacy" className="underline-offset-4 hover:text-text hover:underline">Privacy</Link>
+        <Link to="/terms" className="underline-offset-4 hover:text-text hover:underline">Terms</Link>
+        <Link to="/disclaimer" className="underline-offset-4 hover:text-text hover:underline">Disclaimer</Link>
+      </p>
     </div>
   );
 }
@@ -104,12 +100,12 @@ function SlowHint() {
   );
 }
 
-function AccountBox({ name, onProfile }: { name: string | null; onProfile: () => void }) {
+function AccountBox({ name }: { name: string | null }) {
   const { session } = useAuth();
   const display = name || session?.user.email?.split("@")[0] || "You";
   return (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={onProfile} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-left transition hover:bg-ink-850">
+      <Link to="/profile" aria-label={`${display}, view profile`} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-left transition hover:bg-ink-850">
         <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-800 font-semibold text-accent">
           {display.slice(0, 1).toUpperCase()}
         </span>
@@ -117,7 +113,7 @@ function AccountBox({ name, onProfile }: { name: string | null; onProfile: () =>
           <span className="block truncate text-sm font-semibold">{display}</span>
           <span className="block truncate text-xs text-muted">{session?.user.email}</span>
         </span>
-      </button>
+      </Link>
       <button type="button" aria-label="Sign out" onClick={() => supabase.auth.signOut()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-ink-850 hover:text-danger">
         <LogOut size={18} aria-hidden="true" />
       </button>
@@ -128,7 +124,8 @@ function AccountBox({ name, onProfile }: { name: string | null; onProfile: () =>
 export default function SignedInApp() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
-  const [view, setView] = useState<View>("home");
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const load = useCallback(() => {
     setError("");
@@ -141,7 +138,7 @@ export default function SignedInApp() {
 
   useEffect(() => {
     if (typeof window.scrollTo === "function") window.scrollTo({ top: 0 });
-  }, [view]);
+  }, [location.pathname]);
 
   if (error) {
     return (
@@ -162,38 +159,37 @@ export default function SignedInApp() {
   }
 
   if (!profile.onboarding_complete) {
-    return <ProfileWizard initial={profile} mode="onboarding" onSaved={setProfile} />;
+    return <ProfileWizard initial={profile} mode="onboarding" onSaved={(p) => { setProfile(p); navigate("/", { replace: true }); }} />;
   }
-  if (view === "edit") {
+  if (location.pathname === "/profile/edit") {
     return (
       <ProfileWizard
         initial={profile}
         mode="edit"
-        onSaved={(p) => { setProfile(p); setView("profile"); }}
-        onCancel={() => setView("profile")}
+        onSaved={(p) => { setProfile(p); navigate("/profile"); }}
+        onCancel={() => navigate("/profile")}
       />
     );
   }
 
+  const go = (where: keyof typeof PATHS) => navigate(PATHS[where]);
+  const showSaathi = location.pathname === "/" || location.pathname === "/money";
+  const adding = Boolean((location.state as { add?: boolean } | null)?.add);
+
   return (
     <AppShell
       items={NAV}
-      ask={ASK}
-      active={view}
-      onNavigate={(id) => setView(id as View)}
-      side={view === "home" || view === "money" ? <SaathiPanel key={view} onAction={(a) => setView(a)} /> : undefined}
-      account={<AccountBox name={profile.display_name} onProfile={() => setView("profile")} />}
+      action={{ label: "Add entry", icon: Plus, onClick: () => navigate("/money", { state: { add: true } }) }}
+      side={showSaathi ? <SaathiPanel key={location.key} onAction={go} /> : undefined}
+      account={<AccountBox name={profile.display_name} />}
     >
-      {view === "home" && <HomePage profile={profile} onGo={setView} />}
-      {view === "money" && <MoneyPage />}
-      {view === "profile" && <ProfilePage profile={profile} onEdit={() => setView("edit")} />}
-      {view === "goals" && (
-        <ComingSoon title="Goals" text="Save for a laptop, an emergency fund or college fees. You'll see your progress, how much to save each month, and when you'll reach your goal." />
-      )}
-      {view === "ask" && (
-        <ComingSoon title="Ask ArthSaathi" text="Ask any money question in English, Hindi or Hinglish. ArthSaathi will answer simply, using your own numbers, and show its maths." />
-      )}
+      <Routes>
+        <Route path="/" element={<HomePage profile={profile} onGo={go} />} />
+        {/* key: pressing "Add entry" while already on this page opens the form again */}
+        <Route path="/money" element={<MoneyPage key={location.key} startAdding={adding} />} />
+        <Route path="/profile" element={<ProfilePage profile={profile} onEdit={() => navigate("/profile/edit")} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </AppShell>
   );
 }
-
