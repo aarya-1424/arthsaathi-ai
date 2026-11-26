@@ -5,7 +5,8 @@ import { useId, useState, type ReactNode } from "react";
 import { AuthSheet } from "../auth/AuthScreen";
 import { SiteFooter } from "../legal/SiteFooter";
 import { AreaChart, CHART_COLOURS, Donut, Legend, Sparkline } from "../ui/charts";
-import { Button, Card, cn, fieldClass, GlowBackground, Progress } from "../ui/components";
+import { Button, Card, cn, GlowBackground, Progress } from "../ui/components";
+import { AmountInput } from "../ui/fields";
 import { Logo, LogoMark } from "../ui/Logo";
 import { split503020 } from "./split";
 
@@ -309,16 +310,9 @@ function TryIt() {
             <label htmlFor={id} className="text-sm">Your monthly income</label>
             <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">Example</span>
           </div>
-          <span className="relative -mt-3">
-            <span aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-muted">₹</span>
-            <input
-              id={id}
-              inputMode="numeric"
-              className={`${fieldClass} pl-7 text-lg font-semibold`}
-              value={income}
-              onChange={(e) => setIncome(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8))}
-            />
-          </span>
+          <div className="-mt-3">
+            <AmountInput id={id} value={income} onChange={setIncome} maxDigits={8} className="text-lg font-semibold" />
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {segments.map((seg) => (
               <div key={seg.label} className="rounded-2xl border border-line bg-ink-800/60 p-3">

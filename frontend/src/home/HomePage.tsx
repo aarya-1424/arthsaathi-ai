@@ -6,7 +6,7 @@ import { trendSeries } from "../money/MoneyPage";
 import { currentMonth, monthLabel, shortMonth, type MonthTotal, type Summary } from "../money/types";
 import { OCCUPATIONS, rupees, type Profile } from "../profile/types";
 import { AreaChart } from "../ui/charts";
-import { Button, Card, cn, CountUpRupees } from "../ui/components";
+import { Button, Card, cn, CountUpRupees, Skeleton } from "../ui/components";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -56,7 +56,16 @@ export function HomePage(props: { profile: Profile; onGo: (view: "money" | "prof
           <Button onClick={load}>Try again</Button>
         </Card>
       )}
-      {!summary && !error && <p className="text-muted">Loading your month...</p>}
+      {!summary && !error && (
+        <div role="status" aria-label="Loading your month" className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Skeleton className="col-span-2 h-32" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+          <Skeleton className="h-72" />
+        </div>
+      )}
 
       {summary && empty && (
         <Card variant="highlight" className="flex flex-col items-start gap-4">
@@ -70,21 +79,21 @@ export function HomePage(props: { profile: Profile; onGo: (view: "money" | "prof
       )}
 
       {summary && !empty && (
-        <section aria-label="This month" className="grid gap-4 sm:grid-cols-2">
-          <Card variant="highlight" className="sm:col-span-2">
+        <section aria-label="This month" className="grid grid-cols-2 gap-3 sm:gap-4">
+          <Card variant="highlight" className="col-span-2">
             <p className="text-sm text-muted">{summary.remaining < 0 ? "Overspent" : "Left"} in {monthLabel(month)}</p>
             <CountUpRupees value={summary.remaining} className={cn("mt-1 block text-4xl font-semibold tracking-tight", summary.remaining < 0 && "text-danger")} />
             {summary.savings_rate_percent !== null && summary.remaining > 0 && (
               <p className="mt-2 text-sm text-success">You kept {summary.savings_rate_percent}% of what you received.</p>
             )}
           </Card>
-          <Card interactive className="cursor-pointer" onClick={() => props.onGo("money")}>
+          <Card interactive className="cursor-pointer p-4 sm:p-5" onClick={() => props.onGo("money")}>
             <p className="text-sm text-muted">Received</p>
-            <p className="mt-1 text-2xl font-semibold">{rupees(summary.total_income)}</p>
+            <p className="mt-1 text-xl font-semibold sm:text-2xl">{rupees(summary.total_income)}</p>
           </Card>
-          <Card interactive className="cursor-pointer" onClick={() => props.onGo("money")}>
+          <Card interactive className="cursor-pointer p-4 sm:p-5" onClick={() => props.onGo("money")}>
             <p className="text-sm text-muted">Spent</p>
-            <p className="mt-1 text-2xl font-semibold">{rupees(summary.total_expenses)}</p>
+            <p className="mt-1 text-xl font-semibold sm:text-2xl">{rupees(summary.total_expenses)}</p>
             {summary.comparison && summary.comparison.expense_change !== 0 && (
               <p className="mt-1 text-xs text-muted">
                 {rupees(Math.abs(summary.comparison.expense_change))} {summary.comparison.expense_change > 0 ? "more" : "less"} than last month

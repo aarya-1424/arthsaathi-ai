@@ -7,8 +7,8 @@ vi.mock("../lib/supabase", () => ({
   supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: "tok" } } }) } },
 }));
 
-import { MoneyPage } from "./MoneyPage";
-import { currentMonth, monthLabel, shiftMonth, todayISO } from "./types";
+import { groupByDay, MoneyPage } from "./MoneyPage";
+import { currentMonth, dayHeading, monthLabel, shiftMonth, todayISO } from "./types";
 
 // ---------- a tiny fake server that remembers entries ----------
 
@@ -145,7 +145,9 @@ test("an entry can be edited", async () => {
   rows = [{ id: "a", kind: "expense", amount: 450, occurred_on: today, category: "food", description: "Lunch", notes: null, created_at: "" }];
   render(<MoneyPage />);
   await screen.findByText("−₹450");
+  await user.click(screen.getByRole("button", { name: "Options for Lunch, ₹450" }));
   await user.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByRole("dialog", { name: "Change entry" })).toBeInTheDocument();
   const form = screen.getByRole("form", { name: "Change entry" });
   const amount = within(form).getByLabelText("Amount");
   await user.clear(amount);
@@ -153,6 +155,8 @@ test("an entry can be edited", async () => {
   await user.click(within(form).getByRole("button", { name: "Save changes" }));
   await screen.findByText("−₹600");
   expect(calls.some((c) => c.method === "PUT" && c.url === "/api/transactions/a")).toBe(true);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Entry updated");
 });
 
 test("deleting asks first, and No keeps the entry", async () => {
@@ -160,12 +164,15 @@ test("deleting asks first, and No keeps the entry", async () => {
   rows = [{ id: "a", kind: "expense", amount: 450, occurred_on: today, category: "food", description: null, notes: null, created_at: "" }];
   render(<MoneyPage />);
   await screen.findByText("−₹450");
+  expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument(); // tucked away until asked for
+  await user.click(screen.getByRole("button", { name: "Options for Food, ₹450" }));
   await user.click(screen.getByRole("button", { name: "Delete" }));
   await user.click(screen.getByRole("button", { name: "No" }));
   expect(calls.some((c) => c.method === "DELETE")).toBe(false);
   await user.click(screen.getByRole("button", { name: "Delete" }));
   await user.click(screen.getByRole("button", { name: "Yes, delete" }));
   await waitFor(() => expect(screen.queryByText("−₹450")).not.toBeInTheDocument());
+  expect(screen.getByRole("status")).toHaveTextContent("Entry deleted");
 });
 
 test("setting a budget sends only the filled categories", async () => {
@@ -202,4 +209,76 @@ test("a loading failure shows a message and Try again works", async () => {
   expect(await screen.findByText(/could not reach the database/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByText(/Nothing recorded/)).toBeInTheDocument();
+});
+
+// ---------- Batch 3: pop-ups, confirmation, grouped list, loading ----------
+
+test("the add form opens as a pop-up; Escape closes it without saving", async () => {
+  const user = userEvent.setup();
+  render(<MoneyPage />);
+  await screen.findByText(/Nothing recorded/);
+  await user.click(screen.getByRole("button", { name: "Add entry" }));
+  const dialog = screen.getByRole("dialog", { name: "Add an entry" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  expect(within(dialog).getByLabelText("Amount")).toHaveFocus();
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(calls.some((c) => c.method === "POST")).toBe(false);
+});
+
+test("the amount shows commas while typing but saves a plain number", async () => {
+  const user = userEvent.setup();
+  render(<MoneyPage />);
+  await screen.findByText(/Nothing recorded/);
+  await user.click(screen.getByRole("button", { name: "Add entry" }));
+  const form = screen.getByRole("form", { name: "Add entry" });
+  await user.type(within(form).getByLabelText("Amount"), "125000");
+  expect(within(form).getByLabelText("Amount")).toHaveValue("1,25,000"); // Indian grouping
+  await user.selectOptions(within(form).getByLabelText("Category"), "rent");
+  await user.click(within(form).getByRole("button", { name: "Add" }));
+  await screen.findByText("−₹1,25,000");
+  expect(calls.find((c) => c.method === "POST")!.body).toMatchObject({ amount: 125000 });
+  expect(screen.getByRole("status")).toHaveTextContent("Entry added");
+});
+
+test("saving a budget closes the pop-up and confirms", async () => {
+  const user = userEvent.setup();
+  render(<MoneyPage />);
+  await screen.findByText(/Nothing recorded/);
+  await user.click(screen.getByRole("button", { name: "Set budget" }));
+  const dialog = screen.getByRole("dialog", { name: /Budget for/ });
+  await user.type(within(dialog).getByLabelText("Food limit"), "5000");
+  expect(within(dialog).getByLabelText("Food limit")).toHaveValue("5,000");
+  await user.click(within(dialog).getByRole("button", { name: "Save budget" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.getByRole("status")).toHaveTextContent("Budget saved");
+});
+
+test("entries are grouped by day, with the description as the title", async () => {
+  const yesterday = todayISO(new Date(Date.now() - 86_400_000));
+  rows = [
+    { id: "a", kind: "expense", amount: 450, occurred_on: today, category: "food", description: "Lunch", notes: null, created_at: "" },
+    { id: "b", kind: "income", amount: 28000, occurred_on: today, category: "salary", description: null, notes: null, created_at: "" },
+  ];
+  render(<MoneyPage />);
+  const list = await screen.findByRole("region", { name: "Entries" });
+  expect(within(list).getByRole("heading", { level: 3, name: "Today" })).toBeInTheDocument();
+  expect(within(list).getByText("Lunch")).toBeInTheDocument();
+  expect(within(list).getByText("Food")).toBeInTheDocument(); // category shown under the description
+  expect(within(list).getByText("Salary")).toBeInTheDocument(); // no description: category is the title
+  expect(dayHeading(yesterday)).toBe("Yesterday");
+});
+
+test("groupByDay keeps order and starts a new group for each day", () => {
+  const e = (id: string, day: string) => ({ id, occurred_on: day } as never);
+  const groups = groupByDay([e("1", "2026-11-26"), e("2", "2026-11-26"), e("3", "2026-11-24")]);
+  expect(groups.map((g) => [g.day, g.items.length])).toEqual([["2026-11-26", 2], ["2026-11-24", 1]]);
+  expect(groupByDay([])).toEqual([]);
+});
+
+test("placeholders show while the month is loading", async () => {
+  render(<MoneyPage />);
+  expect(screen.getByRole("status", { name: "Loading your money" })).toBeInTheDocument();
+  await screen.findByText(/Nothing recorded/);
+  expect(screen.queryByRole("status", { name: "Loading your money" })).not.toBeInTheDocument();
 });

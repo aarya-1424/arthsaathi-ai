@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../lib/api";
-import { Button, Card } from "../ui/components";
-import { EXPENSE_CATEGORIES, MAX_ENTRY, monthLabel, type BudgetLimit } from "./types";
+import { Button } from "../ui/components";
+import { AmountInput } from "../ui/fields";
+import { EXPENSE_CATEGORIES, MAX_ENTRY, type BudgetLimit } from "./types";
 
-/** Set a spending limit for each category this month. Leave a box empty for "no limit". */
+/** Set a spending limit for each category this month. Leave a box empty for "no limit". Shown inside a pop-up. */
 export function BudgetEditor(props: { month: string; current: BudgetLimit[]; onSaved: () => void; onCancel: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(props.current.map((b) => [b.category, String(b.amount)])));
@@ -31,37 +32,30 @@ export function BudgetEditor(props: { month: string; current: BudgetLimit[]; onS
   }
 
   return (
-    <Card variant="glass" className="p-5 sm:p-6">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate aria-label="Monthly budget">
-        <div>
-          <h2 className="text-lg font-semibold">Budget for {monthLabel(props.month)}</h2>
-          <p className="text-sm text-muted">Set a limit for the categories you want to watch. Leave the rest empty.</p>
-        </div>
-        <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-          {EXPENSE_CATEGORIES.map((c) => (
-            <label key={c.value} className="flex items-center justify-between gap-3 text-sm">
-              <span>{c.label}</span>
-              <span className="flex w-36 items-center rounded-xl border border-line bg-ink-800 transition focus-within:border-accent/60">
-                <span aria-hidden="true" className="pl-3 text-muted">₹</span>
-                <input
-                  aria-label={`${c.label} limit`}
-                  className="min-h-10 w-full bg-transparent px-2 text-text placeholder:text-muted/70 focus:outline-none"
-                  inputMode="numeric"
-                  placeholder="No limit"
-                  value={values[c.value] ?? ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [c.value]: e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 9) }))}
-                />
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="text-sm">Total budget: ₹{total.toLocaleString("en-IN")}</p>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={props.onCancel}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={saving} className="flex-1">{saving ? "Saving..." : "Save budget"}</Button>
-        </div>
-      </form>
-    </Card>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate aria-label="Monthly budget">
+      <p className="-mt-2 text-sm text-muted">Set a limit for the categories you want to watch. Leave the rest empty.</p>
+      <div className="flex flex-col divide-y divide-line">
+        {EXPENSE_CATEGORIES.map((c) => (
+          <div key={c.value} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span>{c.label}</span>
+            <span className="w-40">
+              <AmountInput
+                aria-label={`${c.label} limit`}
+                placeholder="No limit"
+                className="min-h-10"
+                value={values[c.value] ?? ""}
+                onChange={(digits) => setValues((v) => ({ ...v, [c.value]: digits }))}
+              />
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="border-t border-line pt-3 text-sm font-semibold">Total budget: ₹{total.toLocaleString("en-IN")}</p>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <div className="flex gap-2">
+        <Button variant="ghost" onClick={props.onCancel}>Cancel</Button>
+        <Button type="submit" variant="primary" disabled={saving} className="flex-1">{saving ? "Saving..." : "Save budget"}</Button>
+      </div>
+    </form>
   );
 }

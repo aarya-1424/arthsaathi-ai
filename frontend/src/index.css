@@ -87,6 +87,33 @@ body {
   outline-offset: 2px;
 }
 
+/* ---------- Form details ---------- */
+
+/* Our own arrow on dropdowns (the browser's default one looks different everywhere). */
+.select-arrow {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a39f99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+}
+
+/* Date box at rest: hide the browser's own date text; our "26 Nov 2026" is shown on top instead. */
+.date-quiet::-webkit-datetime-edit {
+  opacity: 0;
+}
+.date-quiet {
+  color: transparent;
+}
+
+/* Loading placeholder: a soft pulsing block in the shape of what is coming. */
+.skeleton {
+  background: var(--color-ink-800);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
 /* ---------- Glass (frosted, see-through) ---------- */
 .glass {
   background: rgb(28 28 28 / 0.72);

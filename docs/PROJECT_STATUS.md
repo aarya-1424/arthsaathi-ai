@@ -315,5 +315,6 @@ Sections 7, 11 and 12 above describe the plain, pre-design UI. Since then:
 - **New server endpoint:** `GET /api/money/trend?end=YYYY-MM&months=1..12`.
 - **Legal pages** are plain-language first versions and are **not lawyer-reviewed**. A contact link shows only when `VITE_CONTACT_EMAIL` is set.
 - **Dev-only previews with sample data:** `/#/design` (app) and `/#/design-onboarding`.
-- **Tests:** backend 130, frontend 148.
-- **Next:** app polish (entries list, add-entry sheet, date and amount formatting, loading states), then Milestone 5 Goals.
+- **App polish:** add/edit entry and budget open as pop-ups (`src/ui/overlays.tsx`: bottom sheet on phones, centred on computers); a short confirmation appears after saving or deleting; amounts show Indian commas while typing and dates read "26 Nov 2026" (`src/ui/fields.tsx`); the entries list is grouped by day with a category icon per row and Edit/Delete behind an options button; loading shows placeholder shapes.
+- **Tests:** backend 130, frontend 168.
+- **Next:** Milestone 5 Goals.

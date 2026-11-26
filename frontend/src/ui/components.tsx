@@ -170,3 +170,10 @@ export function GlowBackground() {
 export const fieldClass =
   "min-h-11 w-full rounded-xl border border-line bg-ink-800 px-3 text-text placeholder:text-muted/70 " +
   "transition focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/30 aria-[invalid=true]:border-danger";
+
+// ---------- Loading placeholder ----------
+
+/** A pulsing block shown while real content loads. Give it a size with className (for example "h-24"). */
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={cn("skeleton rounded-card", className)} />;
+}

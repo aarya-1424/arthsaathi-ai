@@ -1,13 +1,15 @@
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Ellipsis, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { rupees } from "../profile/types";
 import { AreaChart, CHART_COLOURS, Donut, Legend, type Segment } from "../ui/charts";
-import { Button, Card, cn, Progress } from "../ui/components";
+import { Button, Card, cn, Progress, Skeleton } from "../ui/components";
+import { Sheet, useToast } from "../ui/overlays";
 import { BudgetEditor } from "./BudgetEditor";
+import { categoryIcon } from "./categoryIcons";
 import { EntryForm } from "./EntryForm";
 import {
-  categoryLabel, currentMonth, dayLabel, monthLabel, shiftMonth, shortMonth, todayISO,
+  categoryLabel, currentMonth, dayHeading, monthLabel, shiftMonth, shortMonth, todayISO,
   type BudgetLimit, type Entry, type MonthTotal, type Summary,
 } from "./types";
 
@@ -31,14 +33,27 @@ export function spendingSegments(categories: Summary["categories"]): Segment[] {
   return rest > 0 ? [...top, { label: "Everything else", value: rest, color: CHART_COLOURS[5] }] : top;
 }
 
+/** Entries grouped by day, keeping their order (newest first). */
+export function groupByDay(entries: Entry[]): { day: string; items: Entry[] }[] {
+  const groups: { day: string; items: Entry[] }[] = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last.day === e.occurred_on) last.items.push(e);
+    else groups.push({ day: e.occurred_on, items: [e] });
+  }
+  return groups;
+}
+
 export function MoneyPage(props: { startAdding?: boolean } = {}) {
   const thisMonth = currentMonth();
   const [month, setMonth] = useState(thisMonth);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
   const [panel, setPanel] = useState<Panel>(props.startAdding ? { type: "add" } : { type: "none" });
+  const [openRow, setOpenRow] = useState<string | null>(null); // which entry shows its Edit / Delete options
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [toast, showToast] = useToast();
   const latest = useRef(0); // ignore slow answers for a month the user already left
 
   const load = useCallback(async () => {
@@ -63,14 +78,20 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
     load();
   }, [load]);
 
+  const closePanel = useCallback(() => setPanel({ type: "none" }), []);
+
   /** Changing month closes any open form (it belonged to the month you were looking at). */
   function changeMonth(next: string) {
-    setPanel({ type: "none" });
+    closePanel();
+    setOpenRow(null);
+    setConfirmDelete(null);
     setMonth(next);
   }
 
-  function saved() {
-    setPanel({ type: "none" });
+  function saved(message: string) {
+    closePanel();
+    setOpenRow(null);
+    showToast(message);
     load();
   }
 
@@ -79,6 +100,8 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
     try {
       await api(`/transactions/${id}`, { method: "DELETE" });
       setConfirmDelete(null);
+      setOpenRow(null);
+      showToast("Entry deleted");
       load();
     } catch (e) {
       setDeleteError(e instanceof ApiError ? e.message : "Could not delete. Please try again.");
@@ -91,8 +114,8 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">My Money</h1>
-        <nav aria-label="Choose month" className="glass flex items-center gap-1 rounded-full p-1">
+        <h1 className="text-3xl font-semibold">My Money</h1>
+        <nav aria-label="Choose month" className="flex items-center gap-1 rounded-full border border-line bg-ink-850 p-1">
           <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:bg-ink-800 hover:text-text active:scale-95"
             aria-label="Previous month" onClick={() => changeMonth(shiftMonth(month, -1))}>
             <ChevronLeft size={18} aria-hidden="true" />
@@ -111,25 +134,38 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
           <Button onClick={load}>Try again</Button>
         </Card>
       )}
-      {!data && !error && <p className="text-muted">Loading...</p>}
+
+      {!data && !error && (
+        <div role="status" aria-label="Loading your money" className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <Skeleton className="col-span-2 h-28 sm:col-span-1" />
+            <Skeleton className="h-24 sm:h-28" />
+            <Skeleton className="h-24 sm:h-28" />
+          </div>
+          <Skeleton className="h-11 w-56 rounded-full" />
+          <Skeleton className="h-64" />
+          <Skeleton className="h-48" />
+        </div>
+      )}
 
       {data && s && (
         <>
-          <section aria-label="Month summary" className="grid gap-4 sm:grid-cols-3">
-            <Card variant="highlight" className="sm:col-span-3 lg:col-span-1">
+          {/* Phone: one wide card and two small ones side by side, so the summary fits on one screen. */}
+          <section aria-label="Month summary" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <Card variant="highlight" className="col-span-2 sm:col-span-3 lg:col-span-1">
               <p className="text-sm text-muted">{s.remaining < 0 ? "Overspent" : "Left"}</p>
               <p className={cn("mt-1 text-3xl font-semibold tracking-tight", s.remaining < 0 && "text-danger")}>{rupees(Math.abs(s.remaining))}</p>
               {s.savings_rate_percent !== null && s.remaining > 0 && (
                 <p className="mt-2 text-sm text-success">You kept {s.savings_rate_percent}% of what you received this month.</p>
               )}
             </Card>
-            <Card className="lg:col-span-1">
+            <Card className="p-4 sm:p-5 lg:col-span-1">
               <p className="text-sm text-muted">Received</p>
-              <p className="mt-1 text-2xl font-semibold">{rupees(s.total_income)}</p>
+              <p className="mt-1 text-xl font-semibold sm:text-2xl">{rupees(s.total_income)}</p>
             </Card>
-            <Card className="lg:col-span-1">
+            <Card className="p-4 sm:p-5 lg:col-span-1">
               <p className="text-sm text-muted">Spent</p>
-              <p className="mt-1 text-2xl font-semibold">{rupees(s.total_expenses)}</p>
+              <p className="mt-1 text-xl font-semibold sm:text-2xl">{rupees(s.total_expenses)}</p>
               {s.comparison && s.comparison.expense_change !== 0 && (
                 <p className="mt-1 text-xs text-muted">
                   You spent {rupees(Math.abs(s.comparison.expense_change))} {s.comparison.expense_change > 0 ? "more" : "less"} than last month.
@@ -138,21 +174,10 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
             </Card>
           </section>
 
-          {panel.type === "none" && (
-            <div className="flex flex-wrap gap-3">
-              <Button variant="primary" onClick={() => setPanel({ type: "add" })}><Plus size={18} aria-hidden="true" />Add entry</Button>
-              <Button onClick={() => setPanel({ type: "budget" })}>{data.budget.length ? "Edit budget" : "Set budget"}</Button>
-            </div>
-          )}
-          {panel.type === "add" && (
-            <EntryForm defaultDate={month === thisMonth ? todayISO() : `${month}-01`} onSaved={saved} onCancel={() => setPanel({ type: "none" })} />
-          )}
-          {panel.type === "edit" && (
-            <EntryForm editing={panel.entry} defaultDate={panel.entry.occurred_on} onSaved={saved} onCancel={() => setPanel({ type: "none" })} />
-          )}
-          {panel.type === "budget" && (
-            <BudgetEditor month={month} current={data.budget} onSaved={saved} onCancel={() => setPanel({ type: "none" })} />
-          )}
+          <div className="flex flex-wrap gap-3">
+            <Button variant="primary" onClick={() => setPanel({ type: "add" })}><Plus size={18} aria-hidden="true" />Add entry</Button>
+            <Button onClick={() => setPanel({ type: "budget" })}>{data.budget.length ? "Edit budget" : "Set budget"}</Button>
+          </div>
 
           {(hasTrendData || s.categories.length > 0) && (
             <div className="grid gap-4 lg:grid-cols-5">
@@ -214,7 +239,7 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
           )}
 
           <section aria-label="Entries">
-            <Card className="flex flex-col gap-2">
+            <Card className="flex flex-col gap-4">
               <h2 className="font-semibold">Entries</h2>
               {data.entries.length === 0 && (
                 <p className="text-sm text-muted">
@@ -222,42 +247,80 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
                 </p>
               )}
               {data.truncated && <p className="text-sm text-muted">Showing the latest 1,000 entries for this month.</p>}
-              <ul className="flex flex-col divide-y divide-line">
-                {data.entries.map((e) => (
-                  <li key={e.id} className="group flex flex-col gap-2 py-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium">{categoryLabel(e.kind, e.category)}{e.description && <span className="font-normal text-muted"> · {e.description}</span>}</span>
-                        <span className="text-xs text-muted">{dayLabel(e.occurred_on)}</span>
-                      </span>
-                      <span className={cn("shrink-0 font-semibold", e.kind === "income" ? "text-success" : "text-text")}>
-                        {e.kind === "income" ? "+" : "−"}{rupees(e.amount)}
-                      </span>
-                    </div>
-                    {confirmDelete === e.id ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span>Delete this entry?</span>
-                        <Button variant="danger" className="min-h-9 px-3" onClick={() => remove(e.id)}>Yes, delete</Button>
-                        <Button variant="ghost" className="min-h-9 px-3" onClick={() => { setConfirmDelete(null); setDeleteError(""); }}>No</Button>
-                        {deleteError && <span role="alert" className="text-danger">{deleteError}</span>}
-                      </div>
-                    ) : (
-                      <div className="flex gap-1 text-xs">
-                        <button type="button" className="flex min-h-9 items-center gap-1 rounded-full px-2 text-muted transition hover:bg-ink-800 hover:text-text" onClick={() => setPanel({ type: "edit", entry: e })}>
-                          <Pencil size={14} aria-hidden="true" />Edit
-                        </button>
-                        <button type="button" className="flex min-h-9 items-center gap-1 rounded-full px-2 text-muted transition hover:bg-danger/10 hover:text-danger" onClick={() => setConfirmDelete(e.id)}>
-                          <Trash2 size={14} aria-hidden="true" />Delete
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {groupByDay(data.entries).map((group) => (
+                <div key={group.day} className="flex flex-col">
+                  <h3 className="pb-1 text-xs font-semibold tracking-wide text-muted uppercase">{dayHeading(group.day)}</h3>
+                  <ul className="flex flex-col divide-y divide-line">
+                    {group.items.map((e) => {
+                      const Icon = categoryIcon(e.kind, e.category);
+                      const category = categoryLabel(e.kind, e.category);
+                      const title = e.description || category;
+                      const open = openRow === e.id;
+                      return (
+                        <li key={e.id} className="flex flex-col gap-2 py-3 text-sm">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-ink-800 text-muted">
+                              <Icon size={18} aria-hidden="true" />
+                            </span>
+                            <span className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate font-medium">{title}</span>
+                              {e.description && <span className="truncate text-xs text-muted">{category}</span>}
+                            </span>
+                            <span className={cn("shrink-0 font-semibold", e.kind === "income" ? "text-success" : "text-text")}>
+                              {e.kind === "income" ? "+" : "−"}{rupees(e.amount)}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label={`Options for ${title}, ${rupees(e.amount)}`}
+                              aria-expanded={open}
+                              onClick={() => { setOpenRow(open ? null : e.id); setConfirmDelete(null); setDeleteError(""); }}
+                              className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-ink-800 hover:text-text", open ? "bg-ink-800 text-text" : "text-muted")}
+                            >
+                              <Ellipsis size={18} aria-hidden="true" />
+                            </button>
+                          </div>
+                          {open && confirmDelete !== e.id && (
+                            <div className="flex justify-end gap-2">
+                              <Button className="min-h-9 px-4" onClick={() => setPanel({ type: "edit", entry: e })}><Pencil size={14} aria-hidden="true" />Edit</Button>
+                              <Button variant="danger" className="min-h-9 px-4" onClick={() => setConfirmDelete(e.id)}><Trash2 size={14} aria-hidden="true" />Delete</Button>
+                            </div>
+                          )}
+                          {open && confirmDelete === e.id && (
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <span>Delete this entry?</span>
+                              <Button variant="danger" className="min-h-9 px-4" onClick={() => remove(e.id)}>Yes, delete</Button>
+                              <Button variant="ghost" className="min-h-9 px-4" onClick={() => { setConfirmDelete(null); setDeleteError(""); }}>No</Button>
+                              {deleteError && <span role="alert" className="text-danger">{deleteError}</span>}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
             </Card>
           </section>
         </>
       )}
+
+      {/* Forms open as pop-ups, so the page underneath stays where it was. */}
+      {panel.type === "add" && (
+        <Sheet title="Add an entry" onClose={closePanel}>
+          <EntryForm defaultDate={month === thisMonth ? todayISO() : `${month}-01`} onSaved={() => saved("Entry added")} onCancel={closePanel} />
+        </Sheet>
+      )}
+      {panel.type === "edit" && (
+        <Sheet title="Change entry" onClose={closePanel}>
+          <EntryForm editing={panel.entry} defaultDate={panel.entry.occurred_on} onSaved={() => saved("Entry updated")} onCancel={closePanel} />
+        </Sheet>
+      )}
+      {panel.type === "budget" && data && (
+        <Sheet title={`Budget for ${monthLabel(month)}`} onClose={closePanel}>
+          <BudgetEditor month={month} current={data.budget} onSaved={() => saved("Budget saved")} onCancel={closePanel} />
+        </Sheet>
+      )}
+      {toast}
     </div>
   );
 }

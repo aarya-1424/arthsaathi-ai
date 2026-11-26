@@ -96,3 +96,12 @@ export function shortMonth(month: string): string {
   const [y, m] = month.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("en-IN", { month: "short" });
 }
+
+/** Heading for a day in the entries list: "Today", "Yesterday", or "Mon, 24 Nov". */
+export function dayHeading(iso: string, now: Date = new Date()): string {
+  if (iso === todayISO(now)) return "Today";
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (iso === todayISO(yesterday)) return "Yesterday";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
