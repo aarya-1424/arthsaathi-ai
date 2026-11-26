@@ -119,3 +119,9 @@ test("toast shows a message and then clears it", async () => {
   expect(screen.getByRole("status")).toHaveTextContent("Entry added");
   await waitFor(() => expect(screen.getByRole("status")).toBeEmptyDOMElement());
 });
+
+test("an empty date box says 'Choose a date' instead of the browser's own format", () => {
+  render(<DateField aria-label="Target date" value="" onChange={vi.fn()} />);
+  expect(screen.getByText("Choose a date")).toBeInTheDocument();
+  expect(screen.getByLabelText("Target date")).toHaveValue("");
+});

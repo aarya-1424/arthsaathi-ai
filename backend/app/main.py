@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health, me, money, profile
+from app.api import goals, health, me, money, profile
 from app.config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -57,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(me.router, prefix="/api")
     app.include_router(profile.router, prefix="/api")
     app.include_router(money.router, prefix="/api")
+    app.include_router(goals.router, prefix="/api")
     return app
 
 

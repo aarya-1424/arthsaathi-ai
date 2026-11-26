@@ -82,10 +82,10 @@ export function Chip({ selected, children, ...rest }: ButtonHTMLAttributes<HTMLB
 
 // ---------- Progress bar ----------
 
-export type ProgressStatus = "ok" | "near" | "over";
+export type ProgressStatus = "ok" | "near" | "over" | "accent";
 
 // Status colours are separate from the orange brand colour, so a warning never looks like a button.
-const BAR_COLOUR: Record<ProgressStatus, string> = { ok: "bg-success", near: "bg-warn", over: "bg-danger" };
+const BAR_COLOUR: Record<ProgressStatus, string> = { ok: "bg-success", near: "bg-warn", over: "bg-danger", accent: "bg-accent" };
 
 /** A progress bar that fills up smoothly. Width is capped at 100% even when over the limit. */
 export function Progress({ value, max, status = "ok", label }: { value: number; max: number; status?: ProgressStatus; label: string }) {

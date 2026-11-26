@@ -44,6 +44,7 @@ beforeEach(() => {
     if (url.startsWith("/api/money/trend")) return ok(trendBody);
     if (url.startsWith("/api/transactions")) return ok({ month, entries: [], truncated: false });
     if (url.startsWith("/api/budgets")) return ok({ month, limits: [] });
+    if (url === "/api/goals") return ok([]);
     throw new Error(`unexpected ${url}`);
   }));
 });
@@ -105,7 +106,7 @@ test("the browser Back button returns to the previous page", async () => {
 });
 
 test("an unknown address goes to Home", async () => {
-  window.history.replaceState(null, "", "/goals");
+  window.history.replaceState(null, "", "/no-such-page");
   render(<App />);
   expect(await screen.findByRole("heading", { level: 1, name: "Rahul" })).toBeInTheDocument();
   expect(window.location.pathname).toBe("/");
@@ -136,7 +137,7 @@ test("no unfinished pages are offered inside the app", async () => {
   render(<App />);
   await screen.findByRole("heading", { level: 1, name: "Rahul" });
   expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /Goals|Ask ArthSaathi/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Ask ArthSaathi/ })).not.toBeInTheDocument();
 });
 
 test("sign out is on the profile page", async () => {
@@ -173,4 +174,14 @@ test("spending donut shows the top 5 and groups the rest", () => {
   const segments = spendingSegments(cats);
   expect(segments.map((s) => s.label)).toEqual(["Rent", "Food", "Groceries", "Transport", "Medical", "Everything else"]);
   expect(segments[5].value).toBe(500 + 400); // shopping + family
+});
+
+test("Goals is in the menu and opens the goals page", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: "Rahul" });
+  await user.click(screen.getAllByRole("link", { name: "Goals" })[0]);
+  expect(await screen.findByRole("heading", { level: 1, name: "Goals" })).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/goals");
+  expect(await screen.findByText("What are you saving for?")).toBeInTheDocument();
 });

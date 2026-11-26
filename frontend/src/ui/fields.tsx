@@ -62,10 +62,13 @@ export function DateField({ value, onChange, className, ...rest }: { value: stri
             /* some browsers only allow this in certain cases; the field still works */
           }
         }}
-        className={cn(fieldClass, !editing && value && "date-quiet", className)}
+        className={cn(fieldClass, !editing && "date-quiet", className)}
       />
-      {!editing && value && (
-        <span aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">{longDate(value)}</span>
+      {/* At rest we show our own text, so an empty box never shows the browser's "mm/dd/yyyy". */}
+      {!editing && (
+        <span aria-hidden="true" className={cn("pointer-events-none absolute top-1/2 left-3 -translate-y-1/2", !value && "text-muted/70")}>
+          {value ? longDate(value) : "Choose a date"}
+        </span>
       )}
     </span>
   );

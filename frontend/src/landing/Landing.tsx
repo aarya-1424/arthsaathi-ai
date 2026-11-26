@@ -197,6 +197,19 @@ function StepsVisual() {
   );
 }
 
+function GoalVisual() {
+  return (
+    <div className="flex flex-col gap-2 text-xs">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-semibold">Laptop</span>
+        <span className="text-muted">₹15,000 of ₹60,000</span>
+      </div>
+      <Progress value={15000} max={60000} status="accent" label="Example: Laptop goal" />
+      <span className="text-muted">Save about ₹11,250 a month to reach it in 4 months.</span>
+    </div>
+  );
+}
+
 function SpendingVisual() {
   const segments = [
     { label: "Rent", value: 8000, color: CHART_COLOURS[0] },
@@ -221,7 +234,6 @@ function SpendingVisual() {
 // ---------- Features: what works today first, then what is on the way ----------
 
 const ON_THE_WAY = [
-  { icon: Target, title: "Goals", text: "See how much to save each month and when you'll get there." },
   { icon: Languages, title: "Ask in Hindi or English", text: "Ask money questions in English, Hindi or Hinglish." },
   { icon: FileText, title: "Documents explained", text: "Understand a salary slip or Form 16, only if you choose to upload it." },
   { icon: Landmark, title: "Government schemes", text: "Find schemes you may be eligible for, with official sources." },
@@ -244,12 +256,15 @@ function Features() {
         <Tile wide className="md:col-span-4" icon={Sparkles} title="Next steps, from your own numbers" visual={<StepsVisual />}>
           Your Saathi points out what needs attention, like a budget that's almost used up, using only what you've recorded.
         </Tile>
+        <Tile wide className="md:col-span-6" icon={Target} title="Goals you can reach" visual={<GoalVisual />}>
+          A laptop, an emergency fund, college fees. See how far you've come, how much to save each month, and when you could get there.
+        </Tile>
       </div>
       <p className="-mt-4 text-xs text-muted">The small pictures show sample numbers.</p>
 
       <div aria-labelledby="soon-title" role="group" className="flex flex-col gap-4 rounded-card border border-dashed border-line p-5">
         <h3 id="soon-title" className="text-sm font-semibold text-muted">On the way</h3>
-        <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-3">
           {ON_THE_WAY.map((f) => (
             <li key={f.title} className="flex gap-3 text-sm">
               <f.icon size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-muted" />

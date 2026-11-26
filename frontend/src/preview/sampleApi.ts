@@ -40,7 +40,38 @@ function seed() {
     spends.forEach(([category, amount, description], i) =>
       rows.push({ id: `s${n++}`, kind: "expense", amount, occurred_on: `${m}-${String(3 + i * 4).padStart(2, "0")}`, category, description, notes: null, created_at: "" }));
   }
+  goals = [
+    { id: "g1", name: "Emergency fund", target_amount: 100000, saved_amount: 42000, target_date: `${shiftMonth(now, 10)}-28`, monthly_contribution: 6000, priority: "high", notes: null, created_at: "1" },
+    { id: "g2", name: "Laptop", target_amount: 60000, saved_amount: 15000, target_date: `${shiftMonth(now, 4)}-28`, monthly_contribution: 5000, priority: "medium", notes: "For my design course", created_at: "2" },
+    { id: "g3", name: "Trip home for Diwali", target_amount: 12000, saved_amount: 12000, target_date: null, monthly_contribution: null, priority: "low", notes: null, created_at: "3" },
+  ];
   budgets = { [now]: [{ category: "food", amount: 5000 }, { category: "rent", amount: 8000 }, { category: "shopping", amount: 3000 }, { category: "transport", amount: 3000 }] };
+}
+
+type SampleGoal = { id: string; name: string; target_amount: number; saved_amount: number; target_date: string | null; monthly_contribution: number | null; priority: string; notes: string | null; created_at: string };
+let goals: SampleGoal[] = [];
+
+/** A rough copy of the server's goal maths, ONLY so the preview has something to show. The real maths lives on the server. */
+function withProgress(g: SampleGoal) {
+  const now = new Date();
+  const remaining = Math.max(0, g.target_amount - g.saved_amount);
+  const completed = remaining === 0;
+  let months_left: number | null = null;
+  let overdue = false;
+  if (g.target_date && !completed) {
+    const [y, m, d] = g.target_date.split("-").map(Number);
+    if (new Date(y, m - 1, d + 1) <= now) overdue = true;
+    else months_left = Math.max(1, (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth()));
+  }
+  const months_needed = g.monthly_contribution && !completed ? Math.ceil(remaining / g.monthly_contribution) : null;
+  return {
+    ...g, remaining, completed, overdue, months_left,
+    progress_percent: Math.round((Math.min(g.saved_amount, g.target_amount) * 1000) / g.target_amount) / 10,
+    suggested_monthly: months_left ? Math.ceil(remaining / months_left) : null,
+    months_needed,
+    estimated_completion: months_needed ? shiftMonth(currentMonth(), months_needed) : null,
+    on_track: months_needed === null ? null : months_left !== null ? months_needed <= months_left : overdue ? false : null,
+  };
 }
 
 function status(limit: number, spent: number) {
@@ -97,6 +128,24 @@ export function installSampleApi() {
         const s = summary(m);
         return { month: m, income: s.total_income, expenses: s.total_expenses, remaining: s.remaining };
       }));
+    }
+    if (u.pathname === "/api/goals" && method === "GET") {
+      const order = { high: 0, medium: 1, low: 2 } as Record<string, number>;
+      return reply(goals.map(withProgress).sort((a, b) => Number(a.completed) - Number(b.completed) || order[a.priority] - order[b.priority]));
+    }
+    if (u.pathname === "/api/goals" && method === "POST") {
+      const row = { ...body, id: `g${Date.now()}`, created_at: new Date().toISOString() };
+      goals.push(row);
+      return reply(withProgress(row), 201);
+    }
+    if (u.pathname.startsWith("/api/goals/")) {
+      const goalId = u.pathname.split("/").pop();
+      if (method === "DELETE") {
+        goals = goals.filter((x) => x.id !== goalId);
+        return reply(null, 204);
+      }
+      goals = goals.map((x) => (x.id === goalId ? { ...x, ...body } : x));
+      return reply(withProgress(goals.find((x) => x.id === goalId)!));
     }
     if (u.pathname === "/api/budgets") {
       if (method === "PUT") budgets[month] = body.limits;

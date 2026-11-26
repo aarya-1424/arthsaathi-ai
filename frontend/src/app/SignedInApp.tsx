@@ -1,7 +1,8 @@
-import { Home as HomeIcon, LogOut, Pencil, Plus, User, Wallet } from "lucide-react";
+import { Home as HomeIcon, LogOut, Pencil, Plus, Target, User, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { GoalsPage } from "../goals/GoalsPage";
 import { HomePage } from "../home/HomePage";
 import { SaathiPanel } from "../home/SaathiPanel";
 import { api, ApiError } from "../lib/api";
@@ -16,12 +17,13 @@ import { FullScreen } from "./FullScreen";
 
 /**
  * Everything a signed-in user sees. Loaded only after sign-in, so the landing page stays light.
- * Pages have real addresses: /  /money  /profile  /profile/edit
- * (Goals and Ask ArthSaathi join the menu when they are built.)
+ * Pages have real addresses: /  /money  /goals  /profile  /profile/edit
+ * (Ask ArthSaathi joins the menu when it is built.)
  */
 const NAV = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/money", label: "My Money", icon: Wallet },
+  { to: "/goals", label: "Goals", icon: Target },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
@@ -187,6 +189,7 @@ export default function SignedInApp() {
         <Route path="/" element={<HomePage profile={profile} onGo={go} />} />
         {/* key: pressing "Add entry" while already on this page opens the form again */}
         <Route path="/money" element={<MoneyPage key={location.key} startAdding={adding} />} />
+        <Route path="/goals" element={<GoalsPage />} />
         <Route path="/profile" element={<ProfilePage profile={profile} onEdit={() => navigate("/profile/edit")} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

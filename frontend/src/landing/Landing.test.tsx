@@ -42,8 +42,9 @@ test("features lead with what works today; unfinished ones sit in a small 'On th
     "See where your money goes", "Budgets that guide you", "Six months at a glance", "Next steps, from your own numbers",
   ]);
   const soon = within(features).getByRole("group", { name: "On the way" });
-  expect(within(soon).getAllByRole("listitem")).toHaveLength(4);
-  expect(within(soon).getByText("Goals")).toBeInTheDocument();
+  expect(within(soon).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(soon).queryByText("Goals")).not.toBeInTheDocument(); // Goals is built now
+  expect(within(features).getByRole("heading", { level: 3, name: "Goals you can reach" })).toBeInTheDocument();
   expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
 });
 
