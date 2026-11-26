@@ -23,3 +23,10 @@ def test_cors_blocks_unknown_origin():
 def test_cors_allows_local_frontend():
     r = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
     assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
+def test_cors_origins_ignore_trailing_slash_and_spaces():
+    from app.config import Settings
+
+    s = Settings(cors_origins=" https://arthsaathi-ai.vercel.app/ , http://localhost:5173 ,, / ")
+    assert s.cors_origin_list == ["https://arthsaathi-ai.vercel.app", "http://localhost:5173"]

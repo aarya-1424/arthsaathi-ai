@@ -24,7 +24,8 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        # Browsers send the address without a "/" at the end, so remove one if it was typed in.
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip().rstrip("/")]
 
     @property
     def supabase_issuer(self) -> str:
