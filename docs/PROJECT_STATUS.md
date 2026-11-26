@@ -299,3 +299,21 @@ Open http://localhost:5173. The Vite dev server forwards `/api` calls to port 80
 6. **Milestone 8:** public pages (landing, about, features, how it works, privacy, terms, disclaimer), settings, **account deletion**.
 7. **Milestone 9:** hardening (security review, rate limits, monitoring, backups, performance).
 8. **Later:** document understanding (optional uploads), financial learning, government schemes database, admin area.
+
+---
+
+## 13. Update: 26 November 2026 (after the first version of this document)
+
+Sections 7, 11 and 12 above describe the plain, pre-design UI. Since then:
+
+- **Live:** website on Vercel (`https://arthsaathi-ai.vercel.app`), server on Render (`https://arthsaathi-ai-tthi.onrender.com`). See `docs/DEPLOY.md`. Both redeploy when `main` changes. The server ignores a trailing `/` in `CORS_ORIGINS`.
+- **Design:** charcoal theme with one orange accent (`frontend/src/index.css`, `src/ui/`). Green, yellow and red are used only for budget status and errors. Digits are tabular so amounts line up.
+- **Landing page:** floating top bar, hero with a picture of the real dashboard (sample numbers, labelled), four working features with small pictures, an "On the way" list for unbuilt features, a live "Try it" 50/30/20 example, footer with legal links.
+- **Pages have real addresses** (react-router): `/`, `/money`, `/profile`, `/profile/edit`, and public `/privacy`, `/terms`, `/disclaimer`. `frontend/vercel.json` rewrites app addresses to the app.
+- **App layout:** left side panel on computers; top bar, 3-tab bottom bar and a round "Add entry" button on phones. The menu lists only built pages (Home, My Money, Profile). Goals and Ask ArthSaathi return to the menu when built.
+- **Charts** are our own SVG (`src/ui/charts.tsx`): donut, smooth area chart with a month picker (hover, tap or Tab), sparkline.
+- **New server endpoint:** `GET /api/money/trend?end=YYYY-MM&months=1..12`.
+- **Legal pages** are plain-language first versions and are **not lawyer-reviewed**. A contact link shows only when `VITE_CONTACT_EMAIL` is set.
+- **Dev-only previews with sample data:** `/#/design` (app) and `/#/design-onboarding`.
+- **Tests:** backend 130, frontend 148.
+- **Next:** app polish (entries list, add-entry sheet, date and amount formatting, loading states), then Milestone 5 Goals.

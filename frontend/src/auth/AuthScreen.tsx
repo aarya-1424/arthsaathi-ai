@@ -113,7 +113,7 @@ export function AuthForm({ initialMode = "signin" }: { initialMode?: Mode }) {
           </div>
         )}
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        {notice && <p role="status" className="text-sm text-accent">{notice}</p>}
+        {notice && <p role="status" className="text-sm text-success">{notice}</p>}
         <Button type="submit" variant="primary" disabled={busy} className="w-full">
           {busy ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Sign up" : "Send reset link"}
         </Button>

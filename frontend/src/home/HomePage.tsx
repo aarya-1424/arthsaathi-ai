@@ -75,7 +75,7 @@ export function HomePage(props: { profile: Profile; onGo: (view: "money" | "prof
             <p className="text-sm text-muted">{summary.remaining < 0 ? "Overspent" : "Left"} in {monthLabel(month)}</p>
             <CountUpRupees value={summary.remaining} className={cn("mt-1 block text-4xl font-semibold tracking-tight", summary.remaining < 0 && "text-danger")} />
             {summary.savings_rate_percent !== null && summary.remaining > 0 && (
-              <p className="mt-2 text-sm text-accent">You kept {summary.savings_rate_percent}% of what you received.</p>
+              <p className="mt-2 text-sm text-success">You kept {summary.savings_rate_percent}% of what you received.</p>
             )}
           </Card>
           <Card interactive className="cursor-pointer" onClick={() => props.onGo("money")}>

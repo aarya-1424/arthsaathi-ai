@@ -5,7 +5,7 @@ import { currentMonth, type Summary } from "../money/types";
 import { Card, cn } from "../ui/components";
 import { nextSteps, type StepAction } from "./nextSteps";
 
-const TONE = { info: "text-accent", warn: "text-warn", danger: "text-danger" };
+const TONE = { info: "text-muted", warn: "text-warn", danger: "text-danger" };
 
 /** The companion panel: a few next steps based on this month's real numbers. */
 export function SaathiPanel({ onAction }: { onAction: (action: StepAction) => void }) {

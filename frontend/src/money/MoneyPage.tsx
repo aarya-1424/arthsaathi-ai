@@ -120,7 +120,7 @@ export function MoneyPage(props: { startAdding?: boolean } = {}) {
               <p className="text-sm text-muted">{s.remaining < 0 ? "Overspent" : "Left"}</p>
               <p className={cn("mt-1 text-3xl font-semibold tracking-tight", s.remaining < 0 && "text-danger")}>{rupees(Math.abs(s.remaining))}</p>
               {s.savings_rate_percent !== null && s.remaining > 0 && (
-                <p className="mt-2 text-sm text-accent">You kept {s.savings_rate_percent}% of what you received this month.</p>
+                <p className="mt-2 text-sm text-success">You kept {s.savings_rate_percent}% of what you received this month.</p>
               )}
             </Card>
             <Card className="lg:col-span-1">

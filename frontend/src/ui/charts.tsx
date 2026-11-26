@@ -216,7 +216,7 @@ export function smoothPath(points: Point[], minY: number, maxY: number): string 
 }
 
 export function AreaChart(props: { labels: string[]; series: AreaSeries[]; label: string; height?: number }) {
-  const { labels, series, height = 220 } = props;
+  const { labels, series, height = 240 } = props;
   const drawn = useDrawn();
   const uid = useId().replace(/:/g, "");
   const box = useRef<HTMLDivElement>(null);
@@ -229,81 +229,114 @@ export function AreaChart(props: { labels: string[]; series: AreaSeries[]; label
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  const n = labels.length;
+  // Which month's amounts are shown. Starts on the latest month; hover, tap or Tab to another.
+  const [picked, setPicked] = useState<number | null>(null);
+  const active = picked !== null && picked < n ? picked : n - 1;
+
   const padLeft = 46;
   const padRight = 16;
-  const padTop = 34;
+  const padTop = 64; // room for the amounts box
   const padBottom = 26;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
   const baseline = padTop + plotH;
   const top = niceMax(Math.max(0, ...series.flatMap((s) => s.values)));
-  const n = labels.length;
   const xAt = (i: number) => (n <= 1 ? padLeft + plotW / 2 : padLeft + (i * plotW) / (n - 1));
   const yAt = (v: number) => baseline - (Math.max(0, v) / top) * plotH;
+  const colW = n <= 1 ? plotW : plotW / (n - 1);
 
-  const description = `${props.label}: ` + labels
-    .map((l, i) => `${l}: ` + series.map((s) => `${s.label} ${inr(s.values[i] ?? 0)}`).join(", "))
-    .join("; ");
+  const monthText = (i: number) => `${labels[i]}: ` + series.map((s) => `${s.label} ${inr(s.values[i] ?? 0)}`).join(", ");
+  const description = n > 0 ? `${props.label}: ` + labels.map((_, i) => monthText(i)).join("; ") : `${props.label}: no data yet`;
 
-  const lead = series[0];
-  const lastIndex = n - 1;
-  const lastValue = lead?.values[lastIndex] ?? 0;
+  const tipW = 168;
+  const tipLeft = n > 0 ? Math.min(Math.max(xAt(active) - tipW / 2, 0), width - tipW) : 0;
 
   return (
-    <div ref={box} className="flex flex-col gap-3">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full overflow-visible" role="img" aria-label={description}>
-        <defs>
-          {series.map((s, si) => (
-            <linearGradient key={s.label} id={`${uid}-fill-${si}`} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor={s.color} stopOpacity={si === 0 ? 0.35 : 0.12} />
-              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+    <div className="flex flex-col gap-3">
+      <div ref={box} className="relative" style={{ height }} onPointerLeave={() => setPicked(null)}>
+        <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} className="block overflow-visible" role="img" aria-label={description}>
+          <defs>
+            <linearGradient id={`${uid}-fill`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={series[0]?.color} stopOpacity="0.2" />
+              <stop offset="100%" stopColor={series[0]?.color} stopOpacity="0" />
             </linearGradient>
-          ))}
-          <clipPath id={`${uid}-reveal`}>
-            <rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              style={{ transform: drawn ? "scaleX(1)" : "scaleX(0)", transformOrigin: "0 0", transition: "transform 900ms ease-out" }}
-            />
-          </clipPath>
-        </defs>
+            <clipPath id={`${uid}-reveal`}>
+              <rect
+                x={0}
+                y={0}
+                width={width}
+                height={height}
+                style={{ transform: drawn ? "scaleX(1)" : "scaleX(0)", transformOrigin: "0 0", transition: "transform 900ms ease-out" }}
+              />
+            </clipPath>
+          </defs>
 
-        {[0, top / 2, top].map((t) => (
-          <g key={t}>
-            <line x1={padLeft} x2={width - padRight} y1={yAt(t)} y2={yAt(t)} stroke="var(--color-line)" strokeDasharray={t === 0 ? undefined : "3 6"} />
-            <text x={padLeft - 10} y={yAt(t) + 4} textAnchor="end" fontSize="11" fill="var(--color-muted)">{compactInr(t)}</text>
-          </g>
-        ))}
-        {labels.map((l, i) => (
-          <text key={l + i} x={xAt(i)} y={height - 6} textAnchor="middle" fontSize="11" fill="var(--color-muted)">{l}</text>
-        ))}
-
-        <g clipPath={`url(#${uid}-reveal)`}>
-          {series.map((s, si) => ({ s, si })).reverse().map(({ s, si }) => {
-            const pts = s.values.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
-            const line = smoothPath(pts, padTop, baseline);
-            const area = `${line} L ${xAt(n - 1)} ${baseline} L ${xAt(0)} ${baseline} Z`;
-            return (
-              <g key={s.label}>
-                <path d={area} fill={`url(#${uid}-fill-${si})`} />
-                <path d={line} fill="none" stroke={s.color} strokeWidth={si === 0 ? 3 : 2} strokeLinecap="round" strokeDasharray={si === 0 ? undefined : "6 5"} />
-              </g>
-            );
-          })}
-          {lead && n > 0 && (
-            <g>
-              <line x1={xAt(lastIndex)} x2={xAt(lastIndex)} y1={yAt(lastValue)} y2={baseline} stroke={lead.color} strokeOpacity="0.35" strokeDasharray="3 4" />
-              <circle cx={xAt(lastIndex)} cy={yAt(lastValue)} r="6" fill="var(--color-ink-950)" stroke={lead.color} strokeWidth="3" />
-              <g transform={`translate(${Math.min(xAt(lastIndex), width - padRight - 38)} ${Math.max(14, yAt(lastValue) - 22)})`}>
-                <rect x={-38} y={-14} width={76} height={24} rx={12} fill={lead.color} />
-                <text x={0} y={3} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--color-on-accent)">{compactInr(lastValue)}</text>
-              </g>
+          {[0, top / 2, top].map((t) => (
+            <g key={t}>
+              <line x1={padLeft} x2={width - padRight} y1={yAt(t)} y2={yAt(t)} stroke="var(--color-line)" strokeDasharray={t === 0 ? undefined : "2 6"} />
+              <text x={padLeft - 10} y={yAt(t) + 4} textAnchor="end" fontSize="11" fill="var(--color-muted)">{compactInr(t)}</text>
             </g>
-          )}
-        </g>
-      </svg>
+          ))}
+          {labels.map((l, i) => (
+            <text key={l + i} x={xAt(i)} y={height - 6} textAnchor="middle" fontSize="11"
+              fontWeight={i === active ? 600 : 400} fill={i === active ? "var(--color-text)" : "var(--color-muted)"}>{l}</text>
+          ))}
+
+          <g clipPath={`url(#${uid}-reveal)`}>
+            {series.map((s, si) => ({ s, si })).reverse().map(({ s, si }) => {
+              const pts = s.values.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
+              const line = smoothPath(pts, padTop, baseline);
+              return (
+                <g key={s.label}>
+                  {/* Only the first line gets a soft fill, so the chart stays light */}
+                  {si === 0 && n > 0 && <path d={`${line} L ${xAt(n - 1)} ${baseline} L ${xAt(0)} ${baseline} Z`} fill={`url(#${uid}-fill)`} />}
+                  <path d={line} fill="none" stroke={s.color} strokeWidth={si === 0 ? 2.5 : 1.75} strokeLinecap="round" strokeDasharray={si === 0 ? undefined : "5 5"} />
+                </g>
+              );
+            })}
+            {n > 0 && (
+              <g>
+                <line x1={xAt(active)} x2={xAt(active)} y1={padTop - 8} y2={baseline} stroke="var(--color-line-strong)" />
+                {series.map((s) => (
+                  <circle key={s.label} cx={xAt(active)} cy={yAt(s.values[active] ?? 0)} r="5" fill="var(--color-ink-850)" stroke={s.color} strokeWidth="2.5" />
+                ))}
+              </g>
+            )}
+          </g>
+        </svg>
+
+        {/* The amounts for the chosen month */}
+        {n > 0 && (
+          <div aria-hidden="true" className="pointer-events-none absolute top-0 rounded-xl border border-line bg-ink-800 px-3 py-2 text-xs shadow-soft transition-[left] duration-200 ease-out"
+            style={{ left: tipLeft, width: tipW }}>
+            {series.map((s) => (
+              <p key={s.label} className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-1.5 text-muted">
+                  <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />{s.label}
+                </span>
+                <span className="font-semibold text-text">{inr(s.values[active] ?? 0)}</span>
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* One invisible button per month: hover, tap or Tab to read that month */}
+        {labels.map((l, i) => (
+          <button
+            key={l + i}
+            type="button"
+            aria-label={monthText(i)}
+            aria-pressed={i === active}
+            onPointerEnter={() => setPicked(i)}
+            onFocus={() => setPicked(i)}
+            onClick={() => setPicked(i)}
+            className="absolute rounded-lg"
+            style={{ left: Math.max(0, xAt(i) - colW / 2), width: Math.min(colW, width), top: padTop - 8, height: height - padTop + 8 }}
+          />
+        ))}
+      </div>
       <div className="flex flex-wrap gap-4 text-xs text-muted">
         {series.map((s, si) => (
           <span key={s.label} className="flex items-center gap-1.5">
@@ -315,5 +348,25 @@ export function AreaChart(props: { labels: string[]; series: AreaSeries[]; label
         ))}
       </div>
     </div>
+  );
+}
+
+/** A tiny line chart for previews and feature pictures. Decorative: describe it in nearby text. */
+export function Sparkline({ values, color = "#ff6a2b", width = 160, height = 48 }: { values: number[]; color?: string; width?: number; height?: number }) {
+  const uid = useId().replace(/:/g, "");
+  const max = Math.max(1, ...values);
+  const pts = values.map((v, i) => ({ x: values.length <= 1 ? width / 2 : 2 + (i * (width - 4)) / (values.length - 1), y: height - 3 - (Math.max(0, v) / max) * (height - 8) }));
+  const line = smoothPath(pts, 2, height - 3);
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true" className="max-w-full">
+      <defs>
+        <linearGradient id={`${uid}-s`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {pts.length > 1 && <path d={`${line} L ${pts[pts.length - 1].x} ${height} L ${pts[0].x} ${height} Z`} fill={`url(#${uid}-s)`} />}
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
