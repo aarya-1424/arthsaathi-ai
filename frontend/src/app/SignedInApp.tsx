@@ -67,7 +67,7 @@ function ProfilePage({ profile, onEdit }: { profile: Profile; onEdit: () => void
           <div className="pt-3 text-sm">
             <p className="mb-2 text-muted">Goals</p>
             <div className="flex flex-wrap gap-2">
-              {goals.map((g) => <span key={g} className="rounded-full bg-accent/12 px-3 py-1 text-accent">{g}</span>)}
+              {goals.map((g) => <span key={g} className="rounded-full border border-line bg-ink-800 px-3 py-1">{g}</span>)}
             </div>
           </div>
         )}
@@ -106,7 +106,7 @@ function AccountBox({ name }: { name: string | null }) {
   return (
     <div className="flex items-center gap-3">
       <Link to="/profile" aria-label={`${display}, view profile`} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-left transition hover:bg-ink-850">
-        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-800 font-semibold text-accent">
+        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-800 font-semibold text-text">
           {display.slice(0, 1).toUpperCase()}
         </span>
         <span className="min-w-0">

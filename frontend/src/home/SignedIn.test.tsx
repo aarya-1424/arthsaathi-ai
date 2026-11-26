@@ -165,7 +165,7 @@ test("the 6-month chart is a smooth area chart that describes itself", async () 
   render(<App />);
   const chart = await screen.findByRole("img", { name: /Money received and spent over the last 6 months/ });
   expect(chart.getAttribute("aria-label")).toContain("Received ₹28,000, Spent ₹14,000");
-  expect(chart.querySelectorAll("path").length).toBeGreaterThanOrEqual(4); // 2 lines + 2 fills
+  expect(chart.querySelectorAll("path").length).toBe(3); // 2 lines + 1 soft fill
 });
 
 test("spending donut shows the top 5 and groups the rest", () => {

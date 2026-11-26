@@ -191,7 +191,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
             {doc.sections.map((s) => (
               <section key={s.heading} className="flex flex-col gap-3">
                 <h2 className="text-lg font-semibold">{s.heading}</h2>
-                <ul className="flex list-disc flex-col gap-2 pl-5 text-sm leading-relaxed text-muted marker:text-accent">
+                <ul className="flex list-disc flex-col gap-2 pl-5 text-sm leading-relaxed text-muted marker:text-line-strong">
                   {s.points.map((p) => <li key={p}>{p}</li>)}
                 </ul>
               </section>

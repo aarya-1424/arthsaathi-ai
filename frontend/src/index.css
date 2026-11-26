@@ -49,6 +49,37 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Digits all take the same width, so amounts line up neatly in lists and don't jump while counting. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Headings: slightly tighter letters and balanced line breaks read as more refined. */
+.theme-dark :is(h1, h2, h3) {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.theme-dark h1 {
+  letter-spacing: -0.035em;
+}
+
+/* The floating top bar on the landing page: solid enough that page text never shows through. */
+.topbar {
+  background: rgb(23 23 23 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* A wide, soft light behind the hero preview (replaces the hard beam). */
+.hero-glow {
+  background: radial-gradient(50% 50% at 50% 50%, rgb(255 106 43 / 0.32) 0%, rgb(255 106 43 / 0.1) 45%, rgb(255 106 43 / 0) 72%);
+  filter: blur(40px);
+}
+
+/* The hero preview fades out at the bottom, as if the app continues below. */
+.fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
 
 .theme-dark :focus-visible {
@@ -90,9 +121,9 @@ body {
 /* ---------- Highlight card (soft green gradient) ---------- */
 .card-highlight {
   background:
-    radial-gradient(120% 140% at 100% 0%, rgb(255 106 43 / 0.28) 0%, rgb(255 106 43 / 0) 55%),
-    linear-gradient(160deg, #2a1c15 0%, var(--color-ink-850) 70%);
-  border: 1px solid rgb(255 106 43 / 0.25);
+    radial-gradient(90% 120% at 100% 0%, rgb(255 106 43 / 0.2) 0%, rgb(255 106 43 / 0) 60%),
+    linear-gradient(160deg, #231d1a 0%, var(--color-ink-850) 65%);
+  border: 1px solid rgb(255 106 43 / 0.2);
   box-shadow: var(--shadow-soft);
 }
 
@@ -105,14 +136,6 @@ body {
 @keyframes orb-breathe {
   0%, 100% { transform: scale(1); opacity: 0.9; }
   50% { transform: scale(1.08); opacity: 1; }
-}
-
-/* ---------- Light beam (landing hero, inspired by template #1) ---------- */
-.beam {
-  background:
-    radial-gradient(40% 60% at 50% 100%, rgb(255 106 43 / 0.55) 0%, rgb(255 106 43 / 0) 70%),
-    linear-gradient(to top, rgb(255 106 43 / 0.35), rgb(255 106 43 / 0) 70%);
-  filter: blur(18px);
 }
 
 /* ---------- Pop-up (sign in / sign up) ---------- */

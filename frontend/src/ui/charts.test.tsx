@@ -72,3 +72,48 @@ test("smooth curve handles one point or none", () => {
   expect(smoothPath([], 0, 100)).toBe("");
   expect(smoothPath([{ x: 5, y: 5 }], 0, 100)).toBe("M 5 5");
 });
+
+import userEvent from "@testing-library/user-event";
+import { within } from "@testing-library/react";
+import { AreaChart, Sparkline } from "./charts";
+
+const AREA = (
+  <AreaChart
+    label="Last 3 months"
+    labels={["Sep", "Oct", "Nov"]}
+    series={[{ label: "Received", color: "#ff6a2b", values: [28000, 30000, 31000] }, { label: "Spent", color: "#d6d3ce", values: [19000, 21500, 22800] }]}
+  />
+);
+
+test("area chart shows the latest month's exact amounts to start with", () => {
+  const { container } = render(AREA);
+  const box = container.querySelector('[aria-hidden="true"].pointer-events-none')!;
+  expect(box).toHaveTextContent("Received₹31,000");
+  expect(box).toHaveTextContent("Spent₹22,800");
+  expect(screen.getByRole("button", { name: "Nov: Received ₹31,000, Spent ₹22,800" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("tapping or tabbing to a month shows that month's amounts", async () => {
+  const user = userEvent.setup();
+  const { container } = render(AREA);
+  const box = () => within(container.querySelector('[aria-hidden="true"].pointer-events-none') as HTMLElement);
+  await user.click(screen.getByRole("button", { name: "Sep: Received ₹28,000, Spent ₹19,000" }));
+  expect(box().getByText("₹28,000")).toBeInTheDocument();
+  expect(box().getByText("₹19,000")).toBeInTheDocument();
+  await user.tab(); // keyboard: moves to October
+  expect(box().getByText("₹30,000")).toBeInTheDocument();
+});
+
+test("area chart with no months draws safely", () => {
+  render(<AreaChart label="Empty" labels={[]} series={[{ label: "Received", color: "#fff", values: [] }]} />);
+  expect(screen.getByRole("img", { name: "Empty: no data yet" })).toBeInTheDocument();
+  expect(screen.queryAllByRole("button")).toHaveLength(0);
+});
+
+test("sparkline is decorative and handles one or zero points", () => {
+  const { container, rerender } = render(<Sparkline values={[1, 3, 2]} />);
+  expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+  rerender(<Sparkline values={[5]} />);
+  rerender(<Sparkline values={[]} />);
+  expect(container.querySelector("svg")).toBeInTheDocument();
+});
