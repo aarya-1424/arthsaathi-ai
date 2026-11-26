@@ -316,7 +316,7 @@ Sections 7, 11 and 12 above describe the plain, pre-design UI. Since then:
 - **Legal pages** are plain-language first versions and are **not lawyer-reviewed**. A contact link shows only when `VITE_CONTACT_EMAIL` is set.
 - **Dev-only previews with sample data:** `/#/design` (app) and `/#/design-onboarding`.
 - **App polish:** add/edit entry and budget open as pop-ups (`src/ui/overlays.tsx`: bottom sheet on phones, centred on computers); a short confirmation appears after saving or deleting; amounts show Indian commas while typing and dates read "26 Nov 2026" (`src/ui/fields.tsx`); the entries list is grouped by day with a category icon per row and Edit/Delete behind an options button; loading shows placeholder shapes.
-- **Milestone 5, Goals (27 Nov 2026):**
+- **Milestone 5, Goals (26 Nov 2026):**
   - Table `public.goals` (migration `20261126000004_goals.sql`): `name` (1 to 80 chars), `target_amount` (> 0, up to ₹1,000 crore), `saved_amount`, optional `target_date`, optional `monthly_contribution`, `priority` (`high | medium | low`), `notes`; `user_id` defaults to `auth.uid()`; same four row-level-security policies as the other tables.
   - Maths in `backend/app/goals/calc.py` (plain code, 34 tests): to go, progress %, months left (each month after this one up to the target month, at least 1), suggested monthly amount (rounded up), months needed and estimated month at the user's own monthly amount, on track or not, overdue. Assumes the same saving every month and no interest; the page says so.
   - API: `GET /api/goals` (unfinished first by priority, reached last), `POST /api/goals`, `PUT /api/goals/{id}`, `DELETE /api/goals/{id}`. Every answer includes the calculated fields; calculated fields can't be sent in.
