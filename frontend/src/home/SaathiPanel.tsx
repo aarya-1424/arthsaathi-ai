@@ -2,7 +2,7 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { currentMonth, type Summary } from "../money/types";
-import { Card, cn } from "../ui/components";
+import { Card, cn, Skeleton } from "../ui/components";
 import { nextSteps, type StepAction } from "./nextSteps";
 
 const TONE = { info: "text-muted", warn: "text-warn", danger: "text-danger" };
@@ -33,7 +33,12 @@ export function SaathiPanel({ onAction }: { onAction: (action: StepAction) => vo
           <p className="text-xs text-muted">Next steps for you</p>
         </div>
       </div>
-      {!summary && !failed && <p className="text-sm text-muted">Looking at your month...</p>}
+      {!summary && !failed && (
+        <div role="status" aria-label="Looking at your month" className="flex flex-col gap-2">
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+        </div>
+      )}
       {failed && <p className="text-sm text-muted">Next steps will show here once we can load your month.</p>}
       {steps.length > 0 && (
         <ul className="flex flex-col gap-2 text-sm">

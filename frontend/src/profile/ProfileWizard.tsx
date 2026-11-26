@@ -5,6 +5,7 @@ import {
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
 import { Button, Card, cn, fieldClass, GlowBackground } from "../ui/components";
+import { AmountInput, selectClass } from "../ui/fields";
 import { Logo } from "../ui/Logo";
 import {
   AGE_RANGES, amountChoices, GOALS, INCOME_SOURCES, KNOWLEDGE_LEVELS, MAX_MONTHLY, OCCUPATIONS, STATES, rupees,
@@ -324,10 +325,10 @@ function Money(props: { label: string; optional?: boolean; choices: number[]; va
   const [typing, setTyping] = useState(props.value !== "" && !inList);
 
   return (
-    <Field id={id} label={props.label} optional={props.optional} hint={typing && props.value ? rupees(Number(props.value)) : undefined}>
+    <Field id={id} label={props.label} optional={props.optional} >
       <select
         id={id}
-        className={fieldClass}
+        className={selectClass}
         value={typing ? OTHER : props.value}
         onChange={(e) => {
           const v = e.target.value;
@@ -342,19 +343,14 @@ function Money(props: { label: string; optional?: boolean; choices: number[]; va
         <option value={OTHER}>Other amount: type it</option>
       </select>
       {typing && (
-        <span className="relative">
-          <span aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-muted">₹</span>
-          <input
-            aria-label={`${props.label}: exact amount`}
-            className={`${fieldClass} pl-7`}
-            inputMode="numeric"
-            placeholder="Type the amount"
-            autoFocus
-            value={props.value}
-            // Keep only digits: no minus sign, no decimals, no letters.
-            onChange={(e) => props.onChange(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, props.max ?? 9))}
-          />
-        </span>
+        <AmountInput
+          aria-label={`${props.label}: exact amount`}
+          placeholder="Type the amount"
+          autoFocus
+          value={props.value}
+          onChange={props.onChange}
+          maxDigits={props.max ?? 9}
+        />
       )}
     </Field>
   );
@@ -364,7 +360,7 @@ function Select(props: { label: string; optional?: boolean; hint?: string; optio
   const id = useId();
   return (
     <Field id={id} label={props.label} optional={props.optional} hint={props.hint}>
-      <select id={id} className={fieldClass} value={props.value} onChange={(e) => props.onChange(e.target.value)}>
+      <select id={id} className={selectClass} value={props.value} onChange={(e) => props.onChange(e.target.value)}>
         <option value="">{props.optional ? "Prefer not to say" : "Choose one"}</option>
         {props.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

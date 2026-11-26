@@ -11,11 +11,12 @@ test("the Try it card updates the example split as you type", async () => {
   const user = userEvent.setup();
   render(<MemoryRouter><Landing /></MemoryRouter>);
   const income = screen.getByLabelText("Your monthly income");
-  expect(income).toHaveValue("28000");
+  expect(income).toHaveValue("28,000"); // shown with commas
   expect(screen.getByRole("img", { name: /Needs \(rent, food, bills\) ₹14,000 \(50%\)/ })).toBeInTheDocument();
 
   await user.clear(income);
   await user.type(income, "40000");
+  expect(income).toHaveValue("40,000");
   expect(screen.getByRole("img", { name: /Savings ₹8,000 \(20%\)/ })).toBeInTheDocument();
 });
 

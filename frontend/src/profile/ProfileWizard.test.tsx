@@ -98,7 +98,7 @@ test("money boxes ignore minus signs, letters and decimals", async () => {
   await user.click(screen.getByLabelText("Student"));
   await user.click(screen.getByRole("button", { name: "Next" }));
   await typeOwn(user, INCOME, "-5a00.75");
-  expect(screen.getByLabelText(`${INCOME}: exact amount`)).toHaveValue("50075");
+  expect(screen.getByLabelText(`${INCOME}: exact amount`)).toHaveValue("50,075"); // digits only, shown with commas
 });
 
 test("shows the safety promise about PINs and OTPs", async () => {
@@ -176,6 +176,6 @@ test("editing a saved amount that isn't in the list opens the typing box with it
   const user = userEvent.setup();
   render(<ProfileWizard initial={{ ...SAVED, financial: { ...SAVED.financial!, monthly_income: 28750 } }} mode="edit" onSaved={vi.fn()} />);
   await user.click(screen.getByRole("button", { name: "Next" }));
-  expect(screen.getByLabelText(`${INCOME}: exact amount`)).toHaveValue("28750");
+  expect(screen.getByLabelText(`${INCOME}: exact amount`)).toHaveValue("28,750");
   expect(screen.getByLabelText(EXPENSES)).toHaveValue("20000");  // 20000 is in the list, so just selected
 });
